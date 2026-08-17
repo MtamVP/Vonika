@@ -35,6 +35,8 @@ def extract_text(file_bytes: bytes, fileName: str) -> str:
                 text_parts.append(f"--- Bảng: {sheet_name} ---")
                 text_parts.append(df.to_markdown(index=False))
             text = "\n".join(text_parts)
+        elif ext in ['txt', 'md']:
+            text = file_bytes.decode("utf-8", errors='ignore')
         else:
             text = file_bytes.decode("utf-8", errors='ignore')
         if not text.strip():

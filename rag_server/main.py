@@ -39,7 +39,7 @@ def process_file(req: models.ProcessFileRequest):
                 {"file_id": req.file_id, "chunk_index": i + j, "content": chunk}
                 for j, chunk in enumerate(batch)
             ]
-            supabase_client.supabase.table("document").insert(rows).execute()
+            supabase_client.supabase.table("documents").insert(rows).execute()
             
             for chunk in chunks:
                 retrieval.get_cache_tokens(chunk)
@@ -79,3 +79,15 @@ def web_search(q: str):
     }
     response = requests.get(url, headers=headers)
     return response.json()
+
+from fastapi import Response
+
+@app.get("/api/jina")
+def jina_search(q: str):
+    api_key = os.getenv("JINA_API_KEY")
+    url = f"https://r.jina.ai/{q}"
+    headers = {
+        'Authorization': f'Bearer {api_key}'
+    }
+    response = requests.get(url, headers=headers)
+    return Response(content=response.text, media_type="text/plain")

@@ -1000,12 +1000,7 @@ const searchInput = document.getElementById("search-input");
 const searchResult = document.getElementById("search-results-container");
 
 async function fetchJinaSearch(url) {
-  const response = await fetch(`https://r.jina.ai/${url}`, {
-    headers: {
-      Authorization:
-        "jina_08453066470e476d8ecb16a8ae0addf63sUQ0PyvEhm0pqag4Cg3SCvfS4wN",
-    },
-  });
+  const response = await fetch(`http://localhost:8000/api/jina?q=${encodeURIComponent(url)}`);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
@@ -1157,7 +1152,12 @@ async function fetchAIResponse(question, fileIds = [], currentChatId) {
     }),
   });
   if (!res.ok) {
-    throw new Error(`Lỗi gọi API RAG: ${res.status}`);
+    let errorDetail = res.status;
+    try {
+      const errJson = await res.json();
+      if (errJson.detail) errorDetail = errJson.detail;
+    } catch (e) {}
+    throw new Error(`Lỗi gọi API RAG: ${errorDetail}`);
   }
   return res.json();
 }
