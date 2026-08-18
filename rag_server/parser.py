@@ -13,10 +13,27 @@ def extract_text(file_bytes: bytes, fileName: str) -> str:
             import pdfplumber
             text_parts = []
             with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
-                for page in pdf.pages:
+                for page_num, page in enumerate(pdf.pages):
                     page_text = page.extract_text()
                     if page_text:
                         text_parts.append(page_text)
+                    
+                    tables = page.extract_tables()
+                    for table_idx, table in enumerate(tables):
+                        if not table or len(table) < 2: 
+                            continue
+                        text_parts.append(f"\n Bảng {table_idx + 1} - Trang {page_num + 1} ")
+                        
+                        headers = [str(h).replace('\n', ' ').strip() if h else f"Col{j}" for j, h in enumerate(table[0])]
+                        
+                        for idx, row in enumerate(table[1:]):
+                            row_items = []
+                            for h, val in zip(headers, row):
+                                if val:
+                                    clean_val = str(val).replace('\n', ' ').strip()
+                                    row_items.append(f"{h}: {clean_val}")
+                            if row_items:
+                                text_parts.append(f"[Dòng {idx+1}] " + " | ".join(row_items))
             text = "\n".join(text_parts)
         elif ext in ['doc', 'docx']:
             doc = docx.Document(io.BytesIO(file_bytes))
@@ -26,7 +43,7 @@ def extract_text(file_bytes: bytes, fileName: str) -> str:
                     text_parts.append(para.text.strip())
             
             for i, table in enumerate(doc.tables):
-                text_parts.append(f"--- Bảng {i+1} ---")
+                text_parts.append(f" Bảng {i+1} ")
                 headers = []
                 for idx, row in enumerate(table.rows):
                     cells = [cell.text.replace("\n", " ").strip() for cell in row.cells]
@@ -62,7 +79,7 @@ def extract_text(file_bytes: bytes, fileName: str) -> str:
             text_parts = []
             for sheet_name in wb.sheetnames:
                 sheet = wb[sheet_name]
-                text_parts.append(f"--- Bảng: {sheet_name} ---")
+                text_parts.append(f" Bảng: {sheet_name} ")
                 rows = sheet.iter_rows(values_only=True)
                 try:
                     headers = next(rows)
@@ -94,8 +111,8 @@ def extract_text(file_bytes: bytes, fileName: str) -> str:
 
 def chunk_text(text: str) -> list[str]:
     splitter = RecursiveCharacterTextSplitter(
-        chunk_size = 800,
-        chunk_overlap = 150,
-        separators=["\n\n", "\n", ".", "!", "?", ",", " ", ""]
+        chunk_size = 1500,
+        chunk_overlap = 200,
+        separators=["\n\n", "\n Bảng", "\n[Dòng", "\n", ".", " "]
     )
     return splitter.split_text(text)
