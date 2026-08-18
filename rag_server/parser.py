@@ -19,8 +19,13 @@ def extract_text(file_bytes: bytes, fileName: str) -> str:
         elif ext in ['csv', 'tsv']:
             content = file_bytes.decode("utf-8", errors='ignore')
             delimiter = '\t' if ext == 'tsv' else ','
-            reader = csv.reader(io.StringIO(content), delimiter=delimiter)
-            text = "\n".join([', '.join(row) for row in reader])
+            reader = csv.DictReader(io.StringIO(content), delimiter=delimiter)
+            row_texts = []
+            for i, row in enumerate(reader):
+                row_items = [f"{k}: {v}" for k, v in row.items() if k and v and str(v).strip()]
+                if row_items:
+                    row_texts.append(f"[Dòng {i+1}] " + " | ".join(row_items))
+            text = "\n".join(row_texts)
         elif ext == 'json':
             content = file_bytes.decode("utf-8", errors='ignore')
             try:
@@ -33,7 +38,14 @@ def extract_text(file_bytes: bytes, fileName: str) -> str:
             text_parts = []
             for sheet_name, df in df_dict.items():
                 text_parts.append(f"--- Bảng: {sheet_name} ---")
-                text_parts.append(df.to_markdown(index=False))
+                df = df.dropna(how='all')
+                for idx, row in df.iterrows():
+                    row_items = []
+                    for col_name, val in row.items():
+                        if pd.notna(val) and str(val).strip():
+                            row_items.append(f"{col_name}: {val}")
+                    if row_items:
+                        text_parts.append(f"[Dòng {idx+1}] " + " | ".join(row_items))
             text = "\n".join(text_parts)
         elif ext in ['txt', 'md']:
             text = file_bytes.decode("utf-8", errors='ignore')
