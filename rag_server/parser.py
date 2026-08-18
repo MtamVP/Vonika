@@ -58,11 +58,11 @@ def extract_text(file_bytes: bytes, fileName: str) -> str:
                             text_parts.append(f"[Dòng {idx}] " + " | ".join(row_items))
             text = "\n".join(text_parts)
         elif ext in ['csv', 'tsv']:
-            try:
-                content = file_bytes.decode("utf-8-sig")
-            except UnicodeDecodeError:
+            if file_bytes.startswith(b'\xff\xfe') or file_bytes.startswith(b'\xfe\xff'):
+                content = file_bytes.decode("utf-16", errors='ignore')
+            else:
                 try:
-                    content = file_bytes.decode("utf-16")
+                    content = file_bytes.decode("utf-8-sig")
                 except UnicodeDecodeError:
                     content = file_bytes.decode("windows-1258", errors='ignore')
             
