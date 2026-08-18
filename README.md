@@ -12,7 +12,7 @@ I built this to understand retrieval-augmented generation from the ground up —
 
 ![Giao diện Chat](assets/chat_layout.png)
 
-![Giao diện Upload file](assets/upload_file.png)
+![Giao diện Upload file](assets/upload_files.png)
 
 ![Giao diện Settings](assets/settings.png)
 
