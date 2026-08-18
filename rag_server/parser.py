@@ -58,8 +58,24 @@ def extract_text(file_bytes: bytes, fileName: str) -> str:
                             text_parts.append(f"[Dòng {idx}] " + " | ".join(row_items))
             text = "\n".join(text_parts)
         elif ext in ['csv', 'tsv']:
-            content = file_bytes.decode("utf-8", errors='ignore')
-            delimiter = '\t' if ext == 'tsv' else ','
+            try:
+                content = file_bytes.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                try:
+                    content = file_bytes.decode("utf-16")
+                except UnicodeDecodeError:
+                    content = file_bytes.decode("windows-1258", errors='ignore')
+            
+            content = content.replace('\x00', '')
+            
+            first_line = content.split('\n')[0] if content else ""
+            if ext == 'tsv':
+                delimiter = '\t'
+            elif ';' in first_line and first_line.count(';') > first_line.count(','):
+                delimiter = ';'
+            else:
+                delimiter = ','
+                
             reader = csv.DictReader(io.StringIO(content), delimiter=delimiter)
             row_texts = []
             for i, row in enumerate(reader):
