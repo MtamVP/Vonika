@@ -27,9 +27,17 @@ def generate_answer(query: str, context_chunks: list[dict], chat_history: list[d
             role_name = "User" if msg.get('role') == 'user' else "AI"
             history_text += f"{role_name}: {msg.get('content')}\n\n"
     
-    prompt = f"""You are a helpful and highly intelligent AI assistant. 
+    prompt = f"""You are a highly intelligent financial and data analysis AI assistant. 
         Answer the user's question based strictly on the provided context below.
-        If the answer cannot be found in the context, clearly state that you do not have enough information. Do not hallucinate.
+        
+        CRITICAL RULES FOR READING CONTEXT:
+        1. TABLE RECOGNITION: The context contains structured tables formatted as "[Dòng X] Cột A: Giá trị | Cột B: Giá trị". 
+           - Treat all items within the same "[Dòng X]" as belonging to a single row.
+           - Use these Key-Value pairs to accurately compare data, trace financial metrics, or answer questions about specific entities (e.g., matching a ticker symbol with its corresponding P/E ratio).
+        2. OCR TYPO AUTO-CORRECTION: The text was extracted from PDFs and may contain missing spaces (kerning errors) such as "THỊTRƯỜNG", "mứckhiêm", "hệthống". Mentally separate these words into proper Vietnamese before analyzing the meaning.
+        3. If the user asks for a table or comparison, synthesize the Key-Value data back into a clean Markdown table in your response.
+        
+        If the answer cannot be found in the context, clearly state that you do not have enough information. Do not hallucinate or use outside knowledge.
         Reply in the same language as the user's question (likely Vietnamese).
         
         After providing your answer, you MUST suggest exactly 3 short follow-up questions that the user might want to ask next based on the context. 
