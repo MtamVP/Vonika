@@ -2,13 +2,11 @@ fastapi
 uvicorn
 python-dotenv
 supabase
-pypdf
 python-docx
 rank-bm25
 google-genai
 langchain-text-splitters
 scikit-learn
 underthesea
-pandas
 openpyxl
-tabulate
+pdfplumber

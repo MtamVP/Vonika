@@ -1,6 +1,5 @@
 from fastapi import HTTPException
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from pypdf import PdfReader
 import io
 import csv
 import json
@@ -11,11 +10,36 @@ def extract_text(file_bytes: bytes, fileName: str) -> str:
     text = ""
     try:
         if ext == 'pdf':
-            reader = PdfReader(io.BytesIO(file_bytes))
-            text = "\n".join([page.extract_text() for page in reader.pages if page.extract_text()])
+            import pdfplumber
+            text_parts = []
+            with pdfplumber.open(io.BytesIO(file_bytes)) as pdf:
+                for page in pdf.pages:
+                    page_text = page.extract_text()
+                    if page_text:
+                        text_parts.append(page_text)
+            text = "\n".join(text_parts)
         elif ext in ['doc', 'docx']:
             doc = docx.Document(io.BytesIO(file_bytes))
-            text = "\n".join([para.text for para in doc.paragraphs])
+            text_parts = []
+            for para in doc.paragraphs:
+                if para.text.strip():
+                    text_parts.append(para.text.strip())
+            
+            for i, table in enumerate(doc.tables):
+                text_parts.append(f"--- Bảng {i+1} ---")
+                headers = []
+                for idx, row in enumerate(table.rows):
+                    cells = [cell.text.replace("\n", " ").strip() for cell in row.cells]
+                    if idx == 0:
+                        headers = [c if c else f"Column{j}" for j, c in enumerate(cells)]
+                    else:
+                        row_items = []
+                        for h, val in zip(headers, cells):
+                            if val:
+                                row_items.append(f"{h}: {val}")
+                        if row_items:
+                            text_parts.append(f"[Dòng {idx}] " + " | ".join(row_items))
+            text = "\n".join(text_parts)
         elif ext in ['csv', 'tsv']:
             content = file_bytes.decode("utf-8", errors='ignore')
             delimiter = '\t' if ext == 'tsv' else ','
@@ -33,19 +57,29 @@ def extract_text(file_bytes: bytes, fileName: str) -> str:
             except:
                 text = content
         elif ext == 'xlsx':
-            import pandas as pd
-            df_dict = pd.read_excel(io.BytesIO(file_bytes), sheet_name=None)
+            from openpyxl import load_workbook
+            wb = load_workbook(filename=io.BytesIO(file_bytes), read_only=True, data_only=True)
             text_parts = []
-            for sheet_name, df in df_dict.items():
+            for sheet_name in wb.sheetnames:
+                sheet = wb[sheet_name]
                 text_parts.append(f"--- Bảng: {sheet_name} ---")
-                df = df.dropna(how='all')
-                for idx, row in df.iterrows():
+                rows = sheet.iter_rows(values_only=True)
+                try:
+                    headers = next(rows)
+                except StopIteration:
+                    continue
+                if not headers:
+                    continue
+                
+                headers = [str(h).strip() if h is not None else f"Column{i}" for i, h in enumerate(headers)]
+                for idx, row in enumerate(rows):
                     row_items = []
-                    for col_name, val in row.items():
-                        if pd.notna(val) and str(val).strip():
-                            row_items.append(f"{col_name}: {val}")
+                    for h, val in zip(headers, row):
+                        if val is not None and str(val).strip():
+                            row_items.append(f"{h}: {val}")
                     if row_items:
-                        text_parts.append(f"[Dòng {idx+1}] " + " | ".join(row_items))
+                        text_parts.append(f"[Dòng {idx+2}] " + " | ".join(row_items))
+            wb.close()
             text = "\n".join(text_parts)
         elif ext in ['txt', 'md']:
             text = file_bytes.decode("utf-8", errors='ignore')
