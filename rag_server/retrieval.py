@@ -59,7 +59,7 @@ def retrieve_top_chunks(query: str, chunks_data: list[dict], top = 5) -> List[di
     query_joined = " ".join(q_tokens)
     
     try:
-        vectorizer = TfidfVectorizer(ngram_range=(1,2), max_features=30000,token_pattern=r"(?u)[^\s]+")
+        vectorizer = TfidfVectorizer(ngram_range=(1,2), token_pattern=r"(?u)[^\s]+")
         ifidf_matrix = vectorizer.fit_transform(corpus_joined)
         q_vec = vectorizer.transform([query_joined])
         cos_sim = cosine_similarity(q_vec,ifidf_matrix)[0]
