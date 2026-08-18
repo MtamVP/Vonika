@@ -1080,7 +1080,7 @@ if (searchBtn && searchInput) {
     };
 
     try {
-      const url = `http://127.0.0.1:8000/api/search?q=${encodeURIComponent(query)}`;
+      const url = `${backend_url}/search?q=${encodeURIComponent(query)}`;
       const requestOptions = {
         method: "GET",
       };
