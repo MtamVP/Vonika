@@ -234,8 +234,12 @@ function parseAndRenderAIMessage(messageEl, rawContent) {
         const url = URL.createObjectURL(blob);
         const a = document.createElement("a");
         a.href = url;
-        // Tên file ngắn gọn
-        const safeName = userQuestion.replace(/[^a-zA-Z0-9\s_-]/g, '').replace(/\s+/g, '_').trim().split(/\s+/).slice(0, 10).join(" ");
+        const safeName = userQuestion
+            .replace(/[\\/:*?"<>|]/g, '') // Xóa các ký tự cấm trong tên file
+            .trim()
+            .split(/\s+/)
+            .slice(0, 10)
+            .join(" ");
         a.download = `${safeName}.md`;
         document.body.appendChild(a);
         a.click();
