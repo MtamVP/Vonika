@@ -810,6 +810,7 @@ uploadBtn.addEventListener("click", () => {
     const files = Array.from(e.target.files);
     if (files.length > 0) {
       processFilesUpload(files);
+      document.getElementById("close-modal-btn").click();
     }
   });
   fileInput.click();
@@ -826,6 +827,7 @@ uploadFolderBtn.addEventListener("click", () => {
     const files = Array.from(e.target.files);
     if (files.length > 0) {
       processFilesUpload(files);
+      document.getElementById("close-modal-btn").click();
     }
   });
   folderInput.click();
@@ -1103,8 +1105,8 @@ if (searchBtn && searchInput) {
 
           div.addEventListener("click", async () => {
             try {
-              await addWebSrcAsFile(item);
               document.getElementById("close-modal-btn").click();
+              await addWebSrcAsFile(item);
               searchInput.value = "";
               searchResult.innerHTML = "";
             } catch (error) {
