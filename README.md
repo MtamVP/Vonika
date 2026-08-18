@@ -10,8 +10,13 @@ I built this to understand retrieval-augmented generation from the ground up —
 
 ## Screenshots
 
-> _Add 2–3 screenshots or a short GIF here: the chat interface, a file upload/attachment flow, and a Q&A example with sources. This is the single highest-impact addition — it's what most readers look at first._
+![Giao diện Chat](assets/chat_layout.png)
 
+![Giao diện Upload file](assets/upload_file.png)
+
+![Giao diện Settings](assets/settings.png)
+
+![Giao diện chọn file thông minh](assets/attach_files.png)
 ---
 
 ## Why hybrid search instead of pure embeddings?
@@ -22,8 +27,6 @@ Most RAG tutorials reach straight for a vector database. I chose BM25 (exact key
 - **Cost and hosting constraints** — running on a free-tier host with no GPU ruled out hosting my own embedding model, and I wanted to avoid paying for an embeddings API for this project.
 
 Scores from both algorithms are combined using Reciprocal Rank Fusion (`1 / (60 + rank)`), which is more robust than simple score averaging when the two methods score on different scales.
-
-_(If you've since benchmarked this against embeddings — even informally — a sentence or two with rough numbers here would strengthen this section a lot.)_
 
 ---
 
