@@ -2,7 +2,7 @@
 const supabaseUrl = "https://jqzlmzbvaesczarqptye.supabase.co";
 const supabaseKey = "sb_publishable_wXUovp36dvd_VwdX-U8ecg_P-OrGwEb";
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
-const backend_url = "http://127.0.0.1:8000/api";
+const backend_url = "https://vonika-git-863156331978.europe-west1.run.app/api";
 function clearName(name) {
   return name
     .normalize("NFD")
