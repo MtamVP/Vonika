@@ -4,18 +4,23 @@
 
 I built this to understand retrieval-augmented generation from the ground up — not just call an embeddings API, but implement and tune the ranking logic myself, and see where a lightweight hybrid-search approach holds up (and where it doesn't) compared to pure vector search.
 
-**[Live Demo](#)** · **[Screenshots below](#screenshots)** · Built by [Vo Phuc Minh Tam (MTamVP)]
+**[Live Demo](https://vonika.pages.dev/)** ·
+**[Screenshots below](#screenshots)** ·
+**Built by [Vo Phuc Minh Tam (MTamVP)]**
 
 ---
 
 ## Screenshots
-
+**Giao diện chat**
 ![Giao diện Chat](assets/chat_layout.png)
 
+**Giao diện tải file**
 ![Giao diện Upload file](assets/upload_files.png)
 
+**Giao diện Settings**
 ![Giao diện Settings](assets/settings.png)
 
+**Giao diện chọn file thông minh**
 ![Giao diện chọn file thông minh](assets/attach_files.png)
 ---
 
