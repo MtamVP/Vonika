@@ -102,10 +102,14 @@ def extract_text(file_bytes: bytes, fileName: str) -> str:
                 sheet = wb[sheet_name]
                 text_parts.append(f" Bảng: {sheet_name} ")
                 rows = sheet.iter_rows(values_only=True)
-                try:
-                    headers = next(rows)
-                except StopIteration:
-                    continue
+                headers = None
+                for row in rows:
+                    if row:
+                        non_empty = [c for c in row if c is not None and str(c).strip()]
+                        if len(non_empty) > 1:
+                            headers = row
+                            break
+                
                 if not headers:
                     continue
                 
