@@ -68,6 +68,11 @@ def extract_text(file_bytes: bytes, fileName: str) -> str:
             
             content = content.replace('\x00', '')
             
+            # Remove empty rows or rows that only contain commas/semicolons (Excel garbage)
+            lines = content.split('\n')
+            valid_lines = [line for line in lines if line.replace(',', '').replace(';', '').strip()]
+            content = '\n'.join(valid_lines)
+            
             first_line = content.split('\n')[0] if content else ""
             if ext == 'tsv':
                 delimiter = '\t'
