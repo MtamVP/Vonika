@@ -193,8 +193,9 @@ function parseAndRenderAIMessage(messageEl, rawContent) {
         const cursor = fileObj ? 'cursor: pointer;' : 'cursor: default;';
         
         sourcesHtml += `
-          <a href="${href}" ${target} class="source-chip" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 20px; font-size: 0.8rem; text-decoration: none; transition: all 0.2s ease; font-weight: 500; ${cursor}" onmouseover="this.style.backgroundColor='rgba(59, 130, 246, 0.2)'" onmouseout="this.style.backgroundColor='rgba(59, 130, 246, 0.1)'">
-            <i class="fa-regular fa-file-lines"></i> ${sourceName}
+          <a href="${href}" ${target} class="source-chip" title="${sourceName}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 20px; font-size: 0.8rem; text-decoration: none; transition: all 0.2s ease; font-weight: 500; max-width: 100%; box-sizing: border-box; ${cursor}" onmouseover="this.style.backgroundColor='rgba(59, 130, 246, 0.2)'" onmouseout="this.style.backgroundColor='rgba(59, 130, 246, 0.1)'">
+            <i class="fa-regular fa-file-lines" style="flex-shrink: 0;"></i> 
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${sourceName}</span>
           </a>
         `;
       });
