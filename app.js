@@ -235,7 +235,8 @@ function parseAndRenderAIMessage(messageEl, rawContent) {
         const a = document.createElement("a");
         a.href = url;
         // Tên file ngắn gọn
-        a.download = `${userQuestion}.md`;
+        const safeName = userQuestion.replace(/[^a-zA-Z0-9\s_-]/g, '').replace(/\s+/g, '_').slice(0,7);
+        a.download = `${safeName}.md`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
