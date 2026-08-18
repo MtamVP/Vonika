@@ -1000,7 +1000,7 @@ const searchInput = document.getElementById("search-input");
 const searchResult = document.getElementById("search-results-container");
 
 async function fetchJinaSearch(url) {
-  const response = await fetch(`http://localhost:8000/api/jina?q=${encodeURIComponent(url)}`);
+  const response = await fetch(`${backend_url}/jina?q=${encodeURIComponent(url)}`);
   if (!response.ok) {
     throw new Error(`HTTP error! status: ${response.status}`);
   }
