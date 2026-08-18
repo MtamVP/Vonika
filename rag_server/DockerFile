@@ -14,8 +14,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY . .
 
-# Mở port (Cloud Run sẽ ghi đè biến này, mặc định là 8000)
-ENV PORT=8000
+# Mở port (Cloud Run sẽ ghi đè biến này, mặc định là 8080)
+ENV PORT=8080
 EXPOSE $PORT
 
 # Lệnh khởi chạy server (sử dụng shell form để nhận diện biến môi trường $PORT)
