@@ -234,7 +234,7 @@ function parseAndRenderAIMessage(messageEl, rawContent) {
         const a = document.createElement("a");
         a.href = url;
         // Tên file ngắn gọn
-        a.download = `answer_${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.md`;
+        a.download = `${userQuestion}.md`;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
