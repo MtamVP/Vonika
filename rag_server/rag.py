@@ -89,7 +89,8 @@ def remove_vietnamese_accents(text: str) -> str:
     return s
 
 def tokenize_vietnamese(text: str) -> List[str]:
-    clean_text = re.sub(r'[^\w\s]', " ", text).lower()
+    # Preserve dots and hyphens for exact matching of identifiers (e.g., IT007.R17.1)
+    clean_text = re.sub(r'[^\w\s\.\-]', " ", text).lower()
     if HAVE_UNDERTHESEA:
         try:
             tokens = word_tokenize(clean_text, format="text").split()
@@ -120,7 +121,8 @@ def retrieve_top_chunks(query: str, chunks_data: list[dict], top_k: int = 5) -> 
     query_joined = " ".join(q_tokens)
     
     try:
-        vectorizer = TfidfVectorizer(ngram_range=(1, 2), max_features=30000, token_pattern=r"(?u)\b\w+\b")
+        # Use a pattern that matches non-whitespace to preserve dots/hyphens in tokens
+        vectorizer = TfidfVectorizer(ngram_range=(1, 2), max_features=30000, token_pattern=r"(?u)[^\s]+")
         tfidf_matrix = vectorizer.fit_transform(corpus_joined)
         q_vec = vectorizer.transform([query_joined])
         cos_sim = cosine_similarity(q_vec, tfidf_matrix)[0]
