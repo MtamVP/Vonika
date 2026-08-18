@@ -121,7 +121,6 @@ def retrieve_top_chunks(query: str, chunks_data: list[dict], top_k: int = 5) -> 
     query_joined = " ".join(q_tokens)
     
     try:
-        # Use a pattern that matches non-whitespace to preserve dots/hyphens in tokens
         vectorizer = TfidfVectorizer(ngram_range=(1, 2), token_pattern=r"(?u)[^\s]+")
         tfidf_matrix = vectorizer.fit_transform(corpus_joined)
         q_vec = vectorizer.transform([query_joined])
