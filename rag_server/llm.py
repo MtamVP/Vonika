@@ -36,6 +36,7 @@ def generate_answer(query: str, context_chunks: list[dict], chat_history: list[d
            - Use these Key-Value pairs to accurately compare data, trace financial metrics, or answer questions about specific entities (e.g., matching a ticker symbol with its corresponding P/E ratio).
         2. OCR TYPO AUTO-CORRECTION: The text was extracted from PDFs and may contain missing spaces (kerning errors) such as "THỊTRƯỜNG", "mứckhiêm", "hệthống". Mentally separate these words into proper Vietnamese before analyzing the meaning.
         3. If the user asks for a table or comparison, synthesize the Key-Value data back into a clean Markdown table in your response.
+        4. EXACT MATCHING: If the user requests data for specific identifiers (like class codes, ticker symbols, etc.), you MUST ONLY return data for those exact identifiers. Ignore partial matches or similar identifiers (e.g., if asked for 'IT004.R118', do NOT include 'IT004.R118.2' unless explicitly requested).
         
         If the answer cannot be found in the context, clearly state that you do not have enough information. Do not hallucinate or use outside knowledge.
         Reply in the same language as the user's question (likely Vietnamese).
