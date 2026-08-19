@@ -54,8 +54,28 @@ def generate_answer(query: str, context_chunks: list[dict], chat_history: list[d
         
         User Question: {query}
         Answer:"""
-    
     import time
+    try:
+        token_info = client.models.count_tokens(
+            model=model_name,
+            contents=prompt,
+        )
+        total_tokens = token_info.total_tokens
+        print(f"Báo cáo Token: Prompt này sẽ tiêu tốn {total_tokens} tokens.")
+
+        SAFE_LIMIT = 200000 
+        
+        if total_tokens > SAFE_LIMIT:
+            raise HTTPException(
+                status_code=413, 
+                detail=f"Cảnh báo: Khối lượng dữ liệu quá lớn ({total_tokens} tokens, vượt mức an toàn {SAFE_LIMIT}). Vui lòng gỡ bớt tài liệu đính kèm!"
+            )
+            
+    except Exception as e:
+        if isinstance(e, HTTPException):
+            raise e
+        print(f"Lỗi khi đếm token: {e}")
+    
     max_retries = 3
     for attempt in range(max_retries):
         try:

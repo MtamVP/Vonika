@@ -726,6 +726,24 @@ function setupFileInteraction(fileItem, fileData, storageName) {
   updateBatchDeleteBtn();
 }
 
+async function checkStorageLimit(newFileSize) {
+  try {
+    const { data, error } = await supabaseClient.storage.from("chat-files").list("", { limit: 10000 });
+    if (error) throw error;
+    
+    const currentTotalSize = data.reduce((sum, f) => sum + (f.metadata?.size || 0), 0);
+    const ONE_GB = 1024 * 1024 * 1024;
+    
+    if (currentTotalSize + newFileSize > ONE_GB) {
+      return false;
+    }
+    return true;
+  } catch (e) {
+    console.error("Lỗi kiểm tra dung lượng storage:", e);
+    return true; // Cho qua nếu lỗi mạng để không block user
+  }
+}
+
 async function processFilesUpload(files) {
   const allowMimeTypes = [
     ".pdf",
@@ -738,14 +756,32 @@ async function processFilesUpload(files) {
     ".md",
   ];
 
+  const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+
   const validFiles = files.filter((file) => {
     const fileName = file.name.toLowerCase();
-    return allowMimeTypes.some((type) => fileName.endsWith(type));
+    const isValidType = allowMimeTypes.some((type) => fileName.endsWith(type));
+    if (!isValidType) return false;
+    
+    if (file.size > MAX_FILE_SIZE) {
+      showToast(`File "${file.name}" vượt quá giới hạn 50MB`, 'error');
+      return false;
+    }
+    return true;
   });
 
   if (validFiles.length === 0) {
-    showToast("Vui lòng chọn file có định dạng hợp lệ: .pdf, .txt, .docx, .json, .xlsx, .csv, .tsv, .md", 'error');
+    if (!files.some(f => f.size > MAX_FILE_SIZE)) {
+        showToast("Vui lòng chọn file có định dạng hợp lệ: .pdf, .txt, .docx, .json, .xlsx, .csv, .tsv, .md", 'error');
+    }
     return;
+  }
+
+  const totalNewSize = validFiles.reduce((sum, f) => sum + f.size, 0);
+  const isWithinLimit = await checkStorageLimit(totalNewSize);
+  if (!isWithinLimit) {
+      showToast("Kho lưu trữ đã đầy (Giới hạn 1GB). Vui lòng xóa bớt file cũ!", 'error');
+      return;
   }
 
   for (const file of validFiles) {
@@ -812,6 +848,20 @@ async function processFilesUpload(files) {
 
 async function uploadPasteFile(text) {
   try {
+    const textBlob = new Blob([text]);
+    const MAX_FILE_SIZE = 50 * 1024 * 1024;
+    
+    if (textBlob.size > MAX_FILE_SIZE) {
+      showToast("Văn bản dán vào quá lớn (vượt 50MB)", 'error');
+      return;
+    }
+
+    const isWithinLimit = await checkStorageLimit(textBlob.size);
+    if (!isWithinLimit) {
+      showToast("Storage đã đầy, vui lòng xóa file cũ", 'error');
+      return;
+    }
+
     let snippet = text.substring(0, 20).trim();
     if (!snippet) snippet = "Pasted_Text";
 
@@ -1001,7 +1051,7 @@ function showSelectedFiles() {
     updateSelectedFilesCount();
   } else {
     updateSelectedFilesCount();
-    alert("Chưa có file nào được tải lên. Vui lòng tải file lên trước.");
+    showToast("Chưa có file nào được tải lên. Vui lòng tải file lên trước.");
   }
 }
 
@@ -1050,7 +1100,7 @@ attachFileBtn.addEventListener("click", () => {
     openSelectedFilesModal();
     showSelectedFiles();
   } else {
-    alert("Chưa có file nào được tải lên. Vui lòng tải file lên trước.");
+    showToast("Chưa có file nào được tải lên. Vui lòng tải file lên trước.");
   }
 });
 
