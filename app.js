@@ -290,7 +290,7 @@ function parseAndRenderAIMessage(messageEl, rawContent) {
             .replace(/[\\/:*?"<>|]/g, '') // Xóa các ký tự cấm trong tên file
             .trim()
             .split(/\s+/)
-            .slice(0, 10)
+            .slice(0, 7)
             .join(" ");
         a.download = `${safeName}.md`;
         document.body.appendChild(a);

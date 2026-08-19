@@ -475,7 +475,7 @@ main#chat-box::-webkit-scrollbar-thumb:hover {
 
 .chat-area {
   width: 100%;
-  max-width: 840px;
+  max-width: 1200px;
   display: flex;
   flex-direction: column;
   gap: 32px;
@@ -488,6 +488,20 @@ main#chat-box::-webkit-scrollbar-thumb:hover {
   flex-direction: column;
   gap: 8px;
   animation: fadeIn 0.3s ease;
+}
+
+.content::-webkit-scrollbar {
+  height: 7px;
+}
+.content::-webkit-scrollbar-track {
+  background: transparent;
+}
+.content::-webkit-scrollbar-thumb {
+  border-radius: 12px;
+  background: var(--color-border-strong);
+}
+.content::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-secondary);
 }
 
 @keyframes fadeIn {
@@ -576,7 +590,7 @@ footer {
 
 .input-area {
   width: 100%;
-  max-width: 850px;
+  max-width: 1200px;
   display: flex;
   align-items: flex-end;
   background-color: var(--color-bg-muted);
