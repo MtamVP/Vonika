@@ -47,10 +47,10 @@ def build_prompt(query: str, context_chunks: list[dict], chat_history: list[dict
     return prompt
 
 def generate_answer(query: str, context_chunks: list[dict], chat_history: list[dict], model_name:str = "gemini-2.5-flash"):
-    if model_name == "no-ai":
-        if not context_chunks:
-            return "Bạn đang chọn chế độ Không dùng AI. Không tìm thấy tài liệu nào phù hợp.", 0
-        return "Chế độ Không dùng AI. Tài liệu thô tìm được:\n\n" + "\n\n".join([f"[{i+1}] {c['content']}" for i, c in enumerate(context_chunks)]), 0
+    # if model_name == "no-ai":
+    #     if not context_chunks:
+    #         return "Bạn đang chọn chế độ Không dùng AI. Không tìm thấy tài liệu nào phù hợp.", 0
+    #     return "Chế độ Không dùng AI. Tài liệu thô tìm được:\n\n" + "\n\n".join([f"[{i+1}] {c['content']}" for i, c in enumerate(context_chunks)]), 0
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("GEMINI_API_KEY environment variable is missing.")
