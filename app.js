@@ -65,6 +65,26 @@ window.addEventListener('unhandledrejection', function(event) {
     showToast(`Lỗi: ${msg}`, 'error');
 });
 
+// Intercept console.error
+const originalConsoleError = console.error;
+console.error = function(...args) {
+    originalConsoleError.apply(console, args);
+    
+    let msg = args.map(a => {
+        if (a instanceof Error) return a.message;
+        if (typeof a === 'object') {
+            try { return JSON.stringify(a); } catch(e) { return 'Object error'; }
+        }
+        return a;
+    }).join(' ');
+
+    if (msg.includes("Failed to fetch") || msg.toLowerCase().includes("lỗi")) {
+        showToast(msg, 'error');
+    } else {
+        showToast(`Lỗi: ${msg}`, 'error');
+    }
+};
+
 // Layout
 const themeToggleBtn = document.getElementById("theme-toggle-btn");
 const themeIcon = themeToggleBtn ? themeToggleBtn.querySelector("i") : null;
@@ -647,7 +667,7 @@ selectAllBtn.addEventListener("click", () => {
 });
 
 batchDeleteBtn.addEventListener("click", async () => {
-  batchDeleteBtn.innerHTML = "⏳ Đang xóa...";
+  batchDeleteBtn.innerHTML = "<i class=\"fa-solid fa-spinner fa-spin\"></i> Đang xóa...";
   batchDeleteBtn.style.cursor = "wait";
   batchDeleteBtn.disabled = true;
   selectAllBtn.disabled = true;
@@ -739,7 +759,7 @@ async function processFilesUpload(files) {
                 <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
             </div>
             <div class="file-chip-name" title="${fileName}">${fileName}</div>
-            <div class="file-chip-status status-loading">⏳</div>
+            <div class="file-chip-status status-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
         `;
     fileList.appendChild(fileItem);
 
@@ -808,7 +828,7 @@ async function uploadPasteFile(text) {
                 <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
             </div>
             <div class="file-chip-name" title="${fileName}">${fileName}</div>
-            <div class="file-chip-status status-loading">⏳</div>
+            <div class="file-chip-status status-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
         `;
     if (fileList) fileList.appendChild(fileItem);
 
@@ -1081,7 +1101,7 @@ async function addWebSrcAsFile(item) {
                 <svg viewBox="0 0 24 24"><path d="M14 2H6c-1.1 0-1.99.9-1.99 2L4 20c0 1.1.89 2 1.99 2H18c1.1 0 2-.9 2-2V8l-6-6zm2 16H8v-2h8v2zm0-4H8v-2h8v2zm-3-5V3.5L18.5 9H13z"/></svg>
             </div>
             <div class="file-chip-name" title="${fileName}">${fileName}</div>
-            <div class="file-chip-status status-loading">⏳</div>
+            <div class="file-chip-status status-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
         `;
   if (fileList) fileList.appendChild(fileItem);
 
