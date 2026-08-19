@@ -27,8 +27,8 @@ def build_prompt(query: str, context_chunks: list[dict], chat_history: list[dict
         2. OCR TYPO AUTO-CORRECTION: The text was extracted from PDFs and may contain missing spaces (kerning errors) such as "THỊTRƯỜNG", "mứckhiêm", "hệthống". Mentally separate these words into proper Vietnamese before analyzing the meaning.
         3. If the user asks for a table or comparison, synthesize the Key-Value data back into a clean Markdown table in your response.
         4. EXACT MATCHING: If the user requests data for specific identifiers (like class codes, ticker symbols, etc.), you MUST ONLY return data for those exact identifiers. Ignore partial matches or similar identifiers.
-        
-        If the answer cannot be found in the context, clearly state that you do not have enough information. Do not hallucinate or use outside knowledge.
+        5. GENERAL KNOWLEDGE VS SPECIFIC DATA: If the question is related to the documents, specific financial data, or stock metrics, you MUST prioritize using the provided context. If the data is missing, say you do not have enough information.Do not hallucinate or use outside knowledge. 
+        6. If it is a normal greeting, casual conversation, or general knowledge question, you may use your own internal knowledge to answer in a friendly manner.
         Reply in the same language as the user's question (likely Vietnamese).
         
         After providing your answer, you MUST suggest exactly 3 short follow-up questions that the user might want to ask next based on the context. 
