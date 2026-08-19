@@ -13,6 +13,58 @@ function clearName(name) {
     .toLowerCase();
 }
 
+// Toast Notifications System
+function showToast(message, type = 'success') {
+    const toastContainer = document.getElementById('toast-container');
+    if (!toastContainer) {
+        console.warn("Toast container not found. Message:", message);
+        return;
+    }
+
+    const toast = document.createElement('div');
+    toast.className = `custom-toast ${type}`;
+    
+    let iconClass = 'fa-solid fa-circle-check';
+    if (type === 'error') iconClass = 'fa-solid fa-circle-exclamation';
+    else if (type === 'warning') iconClass = 'fa-solid fa-triangle-exclamation';
+    else if (type === 'info') iconClass = 'fa-solid fa-circle-info';
+
+    toast.innerHTML = `
+        <div style="display: flex; align-items: center; flex: 1;">
+            <i class="${iconClass}"></i>
+            <span>${message}</span>
+        </div>
+        <div class="close-toast" onclick="this.parentElement.remove()">
+            <i class="fa-solid fa-xmark" style="margin:0; font-size: 1rem;"></i>
+        </div>
+    `;
+
+    toastContainer.appendChild(toast);
+
+    // Auto close after 5 seconds
+    setTimeout(() => {
+        if (toast.parentElement) {
+            toast.style.animation = 'fadeOutRight 0.35s forwards';
+            setTimeout(() => {
+                if (toast.parentElement) toast.remove();
+            }, 350);
+        }
+    }, 5000);
+}
+
+// Global Error Handlers
+window.addEventListener('error', function(event) {
+    showToast(`Lỗi hệ thống: ${event.message}`, 'error');
+});
+
+window.addEventListener('unhandledrejection', function(event) {
+    let msg = event.reason;
+    if (event.reason && event.reason.message) {
+        msg = event.reason.message;
+    }
+    showToast(`Lỗi: ${msg}`, 'error');
+});
+
 // Layout
 const themeToggleBtn = document.getElementById("theme-toggle-btn");
 const themeIcon = themeToggleBtn ? themeToggleBtn.querySelector("i") : null;
@@ -672,9 +724,7 @@ async function processFilesUpload(files) {
   });
 
   if (validFiles.length === 0) {
-    alert(
-      "Vui lòng chọn file có định dạng hợp lệ: .pdf, .txt, .docx, .json, .xlsx, .csv, .tsv, .md",
-    );
+    showToast("Vui lòng chọn file có định dạng hợp lệ: .pdf, .txt, .docx, .json, .xlsx, .csv, .tsv, .md", 'error');
     return;
   }
 
