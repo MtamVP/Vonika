@@ -53,17 +53,17 @@ def chat(req: models.ChatRequest):
         chat_history = supabase_client.get_chat_history(req.chatId)
     all_chunks = supabase_client.get_chunks_by_file_ids(req.file_ids)
     if not all_chunks:
-        answer = llm.generate_answer(req.query, [], chat_history, req.model)
-        return {"answer": answer, "sources": []}
+        answer, tokens = llm.generate_answer(req.query, [], chat_history, req.model)
+        return {"answer": answer, "sources": [], "tokens": tokens}
     
     top_chunks = retrieval.retrieve_top_chunks(req.query, all_chunks, top=req.top_k_chunks)
-    answer = llm.generate_answer(req.query, top_chunks, chat_history, req.model)
+    answer, tokens = llm.generate_answer(req.query, top_chunks, chat_history, req.model)
     
     source_file_ids = list(set([c["file_id"] for c in top_chunks]))
     source_files_info = supabase_client.get_all_files_info(source_file_ids)
     sources = [f["file_name"] for f in source_files_info]
     
-    return {"answer": answer, "sources": sources}
+    return {"answer": answer, "sources": sources, "tokens": tokens}
 
 import requests
 import os

@@ -417,7 +417,11 @@ async function sendMessages(text) {
     scrollToBottom();
 
     const fileIds = Array.from(selectedAttachFiles);
-    let { answer, sources } = await fetchAIResponse(text, fileIds, currentChatId);
+    let { answer, sources, tokens } = await fetchAIResponse(text, fileIds, currentChatId);
+
+    if (tokens) {
+      showToast(`Báo cáo API: Prompt này đã tiêu tốn ${tokens.toLocaleString()} tokens.`, 'success');
+    }
 
     let contentToSave = answer;
     if (sources && sources.length > 0) {
