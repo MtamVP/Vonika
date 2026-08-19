@@ -1,17 +1,7 @@
 import os
 from google import genai
 from fastapi import HTTPException
-def generate_answer(query: str, context_chunks: list[dict], chat_history: list[dict], model_name:str = "gemini-2.5-flash"):
-    if model_name == "no-ai":
-        if not context_chunks:
-            return "Bạn đang chọn chế độ Không dùng AI. Không tìm thấy tài liệu nào phù hợp.", 0
-        return "Chế độ Không dùng AI. Tài liệu thô tìm được:\n\n" + "\n\n".join([f"[{i+1}] {c['content']}" for i, c in enumerate(context_chunks)]), 0
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY environment variable is missing.")
-
-    client = genai.Client(api_key=api_key)
-    
+def build_prompt(query: str, context_chunks: list[dict], chat_history: list[dict]):
     if not context_chunks:
         context_text = "No context documents provided."
     else:
@@ -54,27 +44,55 @@ def generate_answer(query: str, context_chunks: list[dict], chat_history: list[d
         
         User Question: {query}
         Answer:"""
-    import time
-    try:
-        token_info = client.models.count_tokens(
-            model=model_name,
-            contents=prompt,
-        )
-        total_tokens = token_info.total_tokens
-        print(f"Báo cáo Token: Prompt này sẽ tiêu tốn {total_tokens} tokens.")
+    return prompt
 
-        SAFE_LIMIT = 200000 
-        
-        if total_tokens > SAFE_LIMIT:
+def generate_answer(query: str, context_chunks: list[dict], chat_history: list[dict], model_name:str = "gemini-2.5-flash"):
+    if model_name == "no-ai":
+        if not context_chunks:
+            return "Bạn đang chọn chế độ Không dùng AI. Không tìm thấy tài liệu nào phù hợp.", 0
+        return "Chế độ Không dùng AI. Tài liệu thô tìm được:\n\n" + "\n\n".join([f"[{i+1}] {c['content']}" for i, c in enumerate(context_chunks)]), 0
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY environment variable is missing.")
+
+    client = genai.Client(api_key=api_key)
+    
+    import time
+    SAFE_LIMIT = 200000
+    total_tokens = 0
+    prompt = ""
+    
+    while True:
+        prompt = build_prompt(query, context_chunks, chat_history)
+        try:
+            token_info = client.models.count_tokens(
+                model=model_name,
+                contents=prompt,
+            )
+            total_tokens = token_info.total_tokens
+        except Exception as e:
+            print(f"Lỗi khi đếm token: {e}")
+            break
+            
+        if total_tokens <= SAFE_LIMIT:
+            print(f"Báo cáo Token: Prompt này sẽ tiêu tốn {total_tokens} tokens.")
+            break
+            
+        if len(context_chunks) <= 5:
             raise HTTPException(
                 status_code=413, 
-                detail=f"Cảnh báo: Khối lượng dữ liệu quá lớn ({total_tokens} tokens, vượt mức an toàn {SAFE_LIMIT}). Vui lòng gỡ bớt tài liệu đính kèm!"
+                detail=f"Cảnh báo: Dù đã giảm xuống còn {len(context_chunks)} đoạn trích, dữ liệu vẫn quá lớn ({total_tokens} tokens, vượt mức {SAFE_LIMIT}). Vui lòng gỡ bớt tài liệu đính kèm!"
             )
             
-    except Exception as e:
-        if isinstance(e, HTTPException):
-            raise e
-        print(f"Lỗi khi đếm token: {e}")
+        overage_tokens = total_tokens - SAFE_LIMIT
+        chars_to_remove = overage_tokens * 2.5 # Ước tính 1 token ~ 2.5 ký tự
+        
+        removed_chars = 0
+        while context_chunks and removed_chars < chars_to_remove and len(context_chunks) > 5:
+            removed_chunk = context_chunks.pop()
+            removed_chars += len(removed_chunk['content'])
+            
+        print(f"Vượt token an toàn, đang tự động giảm bớt context_chunks. Hiện còn {len(context_chunks)} chunks.")
     
     max_retries = 3
     for attempt in range(max_retries):
