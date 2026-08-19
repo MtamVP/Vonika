@@ -395,6 +395,11 @@ body.is-resizing .sidebar-right {
   }
 }
 
+.file-size-count{
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+
 /* Chat Interface */
 .chat-section {
   flex: 1;

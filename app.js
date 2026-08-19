@@ -694,6 +694,7 @@ batchDeleteBtn.addEventListener("click", async () => {
   }
   
   updateSelectedFilesCount();
+  checkStorageLimit();
 
   batchDeleteBtn.disabled = false;
   selectAllBtn.disabled = false;
@@ -730,7 +731,7 @@ function setupFileInteraction(fileItem, fileData, storageName) {
   updateBatchDeleteBtn();
 }
 
-async function checkStorageLimit(newFileSize) {
+async function checkStorageLimit(newFileSize = 0) {
   try {
     const { data, error } = await supabaseClient.storage.from("chat-files").list("", { limit: 10000 });
     if (error) throw error;
@@ -738,13 +739,20 @@ async function checkStorageLimit(newFileSize) {
     const currentTotalSize = data.reduce((sum, f) => sum + (f.metadata?.size || 0), 0);
     const ONE_GB = 1024 * 1024 * 1024;
     
+    // Luôn luôn cập nhật UI với tổng dung lượng mới nhất
+    const sizeCountEl = document.getElementById("file-size-count");
+    if (sizeCountEl) {
+        let sizeInMB = (currentTotalSize / (1024 * 1024)).toFixed(2);
+        sizeCountEl.innerText = `${sizeInMB}/1024MB`;
+    }
+
     if (currentTotalSize + newFileSize > ONE_GB) {
       return false;
     }
     return true;
   } catch (e) {
     console.error("Lỗi kiểm tra dung lượng storage:", e);
-    return true; // Cho qua nếu lỗi mạng để không block user
+    return true; 
   }
 }
 
@@ -783,11 +791,14 @@ async function processFilesUpload(files) {
 
   const totalNewSize = validFiles.reduce((sum, f) => sum + f.size, 0);
   const isWithinLimit = await checkStorageLimit(totalNewSize);
+    
   if (!isWithinLimit) {
       showToast("Kho lưu trữ đã đầy (Giới hạn 1GB). Vui lòng xóa bớt file cũ!", 'error');
       return;
   }
 
+  
+  
   for (const file of validFiles) {
     const fileItem = document.createElement("div");
     fileItem.className = "file-chip";
@@ -848,6 +859,7 @@ async function processFilesUpload(files) {
       }
     }
   }
+  checkStorageLimit();
 }
 
 async function uploadPasteFile(text) {
@@ -927,6 +939,7 @@ async function uploadPasteFile(text) {
       fileItem.style.borderColor = "#EF4444";
     }
   }
+  checkStorageLimit();
 }
 
 uploadBtn.addEventListener("click", () => {
@@ -981,6 +994,8 @@ async function loadFiles() {
     }
   } catch (error) {
     console.error("Lỗi tải DB:", error);
+  } finally {
+    checkStorageLimit();
   }
 }
 
@@ -1197,6 +1212,8 @@ async function addWebSrcAsFile(item) {
   selectedAttachFiles.add(String(dbData[0].id));
   updateSelectedFilesCount();
   setupFileInteraction(fileItem, dbData[0], uniqueFileName);
+  
+  checkStorageLimit();
 }
 
 if (searchBtn && searchInput) {
@@ -1206,10 +1223,6 @@ if (searchBtn && searchInput) {
     searchResult.innerHTML =
       '<p style="text-align:center; color:#5f6368; font-size:14px;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tìm kiếm trên web...</p><br>';
 
-    const requestOptions = {
-      method: "GET",
-      redirect: "follow",
-    };
 
     try {
       const url = `${backend_url}/search?q=${encodeURIComponent(query)}`;
