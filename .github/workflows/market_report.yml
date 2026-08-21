@@ -44,7 +44,7 @@ jobs:
             echo "Sending $PDF_FILE to Discord..."
             curl -H "Content-Type: multipart/form-data" \
                  -F "file1=@\"$PDF_FILE\"" \
-                 -F "payload_json={\"content\": \"**Báo cáo thị trường hôm nay**\"}" \
+                 -F "payload_json={\"content\": \"**Báo cáo thị trường hôm nay**\", \"flags\": 4096, \"allowed_mentions\": {\"parse\": []}}" \
                  $DISCORD_WEBHOOK_URL
           else
             echo "Không tìm thấy file báo cáo PDF"

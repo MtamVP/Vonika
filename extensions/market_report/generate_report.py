@@ -138,7 +138,7 @@ Lưu ý: Không dùng markdown code block bao quanh kết quả trả về, ch�
 Bắt đầu viết Báo cáo:
 """
     max_retries = 5
-    current_model = "gemini-3.5-flash"
+    current_model = "gemini-3.6-flash"
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
