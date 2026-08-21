@@ -19,7 +19,8 @@ load_dotenv(env_path)
 
 OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 
-plt.rcParams['font.family'] = 'Segoe UI'
+plt.rcParams['font.family'] = 'sans-serif'
+plt.rcParams['font.sans-serif'] = ['Segoe UI', 'Arial', 'DejaVu Sans', 'sans-serif']
 
 def _draw_single_investor_chart(df_filtered, title, output_path):
     df_grouped = df_filtered.groupby(['StockSymbol', 'TradeDirection'])['NetTradingValue'].sum().reset_index()

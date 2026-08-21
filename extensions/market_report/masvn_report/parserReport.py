@@ -92,8 +92,8 @@ def extract_analytical_text(pdf_path, silent=False):
             else:
                 text_content["thong_tin_cap_nhat"] = tin_tuc_text[start_idx:].strip()
 
-    import fitz
-    doc = fitz.open(pdf_path)
+    import pymupdf
+    doc = pymupdf.open(pdf_path)
     page1 = doc[0]
     blocks = page1.get_text("blocks")
     
