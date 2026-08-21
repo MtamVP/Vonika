@@ -138,17 +138,25 @@ Lưu ý: Không dùng markdown code block bao quanh kết quả trả về, ch�
 Bắt đầu viết Báo cáo:
 """
     max_retries = 5
+    current_model = "gemini-3.5-flash"
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
-                model="gemini-3.7-flash",
+                model=current_model,
                 contents=prompt
             )
             return response.text
         except Exception as e:
             if "503" in str(e) and attempt < max_retries - 1:
                 import time
-                time.sleep(20) # Chờ 20 giây rồi thử lại
+                # Exponential backoff: 20s, 40s, 80s...
+                sleep_time = 20 * (2 ** attempt)
+                print(f"Gemini API 503 Error (High demand). Retrying in {sleep_time}s... (Attempt {attempt+1}/{max_retries})")
+                time.sleep(sleep_time)
+                # Fallback to a lighter model after 2 failed attempts
+                if attempt == 1:
+                    print("Falling back to gemini-2.5-flash due to prolonged high demand.")
+                    current_model = "gemini-2.5-flash"
             else:
                 raise e
 

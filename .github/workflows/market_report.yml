@@ -2,8 +2,8 @@ name: Daily Market Report
 
 on:
   schedule:
-    # 12:30 UTC tương đương 19:30 tối giờ Việt Nam (UTC+7)
-    - cron: '30 12 * * *'
+    # 12:30 UTC tương đương 19:30 tối giờ Việt Nam (UTC+7), chạy từ Thứ 2 đến Thứ 6 (1-5)
+    - cron: '30 12 * * 1-5'
   workflow_dispatch: # Cho phép chạy bằng tay trên web
 
 jobs:
