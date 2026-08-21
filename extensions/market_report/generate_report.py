@@ -272,6 +272,15 @@ if __name__ == "__main__":
     import subprocess
     import sys
     
+    # 1. Cơ chế Tự thoát (Idempotency) - Kiểm tra file của ngày hôm nay đã tồn tại chưa
+    today_date = datetime.now().strftime('%d/%m/%Y')
+    today_file_date = today_date.replace('/', '-')
+    expected_pdf = os.path.join(OUTPUT_DIR, f"Báo cáo thị trường ngày {today_file_date}.pdf")
+    
+    if os.path.exists(expected_pdf):
+        print(f"File '{expected_pdf}' đã tồn tại. Bỏ qua chạy để tránh trùng lặp.")
+        sys.exit(0)
+
     # Tự động chạy các script cập nhật dữ liệu mới nhất
     try:
         subprocess.run([sys.executable, "download_report.py"], cwd="masvn_report", check=True)
@@ -283,11 +292,16 @@ if __name__ == "__main__":
     text_path = os.path.join("masvn_report", "extracted_text.json")
     data_path = os.path.join("masvn_report", "extracted_data.json")
     csv_path = os.path.join("vietstock", "combined_net_trading.csv")
-    report_date = datetime.now().strftime('%d/%m/%Y')
+    
     with open(data_path, 'r', encoding='utf-8') as f:
         d = json.load(f)
         if 'report_date' in d:
             report_date = d['report_date']
+            
+    if report_date != today_date:
+        print(f"Dữ liệu web mới nhất là ngày {report_date}, chưa có của hôm nay ({today_date}). Bỏ qua.")
+        sys.exit(0)
+
     out_path = f"Báo cáo thị trường ngày {report_date.replace('/', '-')}.pdf"
     
     if not os.path.exists(csv_path):

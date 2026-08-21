@@ -50,3 +50,12 @@ jobs:
             echo "Không tìm thấy file báo cáo PDF"
             exit 1
           fi
+
+      - name: Commit Generated Report to Repository
+        working-directory: ./extensions/market_report
+        run: |
+          git config --global user.name "GitHub Action"
+          git config --global user.email "action@github.com"
+          git add "Báo cáo thị trường ngày "*.pdf
+          git commit -m "Auto-generated daily market report" || echo "No new report to commit"
+          git push
