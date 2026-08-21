@@ -1,0 +1,52 @@
+name: Daily Market Report
+
+on:
+  schedule:
+    # 12:30 UTC tương đương 19:30 tối giờ Việt Nam (UTC+7)
+    - cron: '30 12 * * *'
+  workflow_dispatch: # Cho phép chạy bằng tay trên web
+
+jobs:
+  build-and-send:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11' # Hoặc phiên bản bạn đang dùng
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas matplotlib markdown google-genai playwright python-dotenv requests pdfplumber pymupdf
+          # Cài đặt trình duyệt cho playwright
+          playwright install chromium
+          
+      - name: Run Report Generation
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        working-directory: ./extensions/market_report
+        run: |
+          python generate_report.py
+
+      - name: Send Report to Discord
+        env:
+          DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/1480054412935303190/IS9A2agjFfyMkthPZjN4GxPy9-tw2SCXeHD0LloBLiIerrrzZckBDjmx4_FsaOXdmkXQ"
+        working-directory: ./extensions/market_report
+        run: |
+          # Tìm file PDF báo cáo vừa được tạo
+          PDF_FILE=$(ls "Báo cáo thị trường ngày"*.pdf | head -n 1)
+          
+          if [ -n "$PDF_FILE" ]; then
+            echo "Sending $PDF_FILE to Discord..."
+            curl -H "Content-Type: multipart/form-data" \
+                 -F "file1=@\"$PDF_FILE\"" \
+                 -F "payload_json={\"content\": \"**Báo cáo thị trường hôm nay đã sẵn sàng!**\"}" \
+                 $DISCORD_WEBHOOK_URL
+          else
+            echo "Không tìm thấy file báo cáo PDF nào!"
+            exit 1
+          fi
