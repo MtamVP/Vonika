@@ -1,3 +1,4 @@
 ﻿.env
 rag_server/.env
 __pycache__/
+extensions/
