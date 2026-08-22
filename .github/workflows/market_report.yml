@@ -39,18 +39,22 @@ jobs:
           DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/1480054412935303190/IS9A2agjFfyMkthPZjN4GxPy9-tw2SCXeHD0LloBLiIerrrzZckBDjmx4_FsaOXdmkXQ"
         working-directory: ./extensions/market_report
         run: |
-          # Tìm file PDF báo cáo vừa được tạo
-          PDF_FILE=$(ls "Báo cáo thị trường ngày"*.pdf | head -n 1)
-          
-          if [ -n "$PDF_FILE" ]; then
-            echo "Sending $PDF_FILE to Discord..."
-            curl -H "Content-Type: multipart/form-data" \
-                 -F "file1=@\"$PDF_FILE\"" \
-                 -F "payload_json={\"content\": \"**Báo cáo thị trường hôm nay**\", \"flags\": 4096, \"allowed_mentions\": {\"parse\": []}}" \
-                 $DISCORD_WEBHOOK_URL
+          if [ -f "NEW_REPORT_GENERATED" ]; then
+            # Tìm file PDF báo cáo vừa được tạo
+            PDF_FILE=$(ls "Báo cáo thị trường ngày"*.pdf | head -n 1)
+            
+            if [ -n "$PDF_FILE" ]; then
+              echo "Sending $PDF_FILE to Discord..."
+              curl -H "Content-Type: multipart/form-data" \
+                   -F "file1=@\"$PDF_FILE\"" \
+                   -F "payload_json={\"content\": \"**Báo cáo thị trường hôm nay**\", \"flags\": 4096, \"allowed_mentions\": {\"parse\": []}}" \
+                   $DISCORD_WEBHOOK_URL
+            fi
+            
+            # Xóa cờ sau khi gửi
+            rm "NEW_REPORT_GENERATED"
           else
-            echo "Không tìm thấy file báo cáo PDF"
-            exit 1
+            echo "Không có file báo cáo MỚI nào được tạo trong lần chạy này. Bỏ qua bước gửi Discord."
           fi
 
       - name: Commit Generated Report to Repository

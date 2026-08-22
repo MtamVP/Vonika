@@ -310,6 +310,10 @@ if __name__ == "__main__":
         sys.exit(1)
     else:
         asyncio.run(build_report_pdf(text_path, data_path, csv_path, out_path))
+        
+        # Đánh dấu đã tạo file thành công trong phiên chạy này
+        with open("NEW_REPORT_GENERATED", "w") as f:
+            f.write("OK")
 
     for old_report in glob.glob(os.path.join(OUTPUT_DIR, "Báo cáo thị trường ngày *.pdf")):
         if os.path.abspath(old_report) != os.path.abspath(out_path):
