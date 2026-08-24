@@ -81,6 +81,29 @@ jobs:
         run: |
           python rollup_reports.py --type ${{ env.ROLLUP_TYPE }}
 
+      - name: Send Report to Discord
+        if: env.ROLLUP_TYPE != 'none'
+        env:
+          DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/1480054412935303190/IS9A2agjFfyMkthPZjN4GxPy9-tw2SCXeHD0LloBLiIerrrzZckBDjmx4_FsaOXdmkXQ"
+        working-directory: ./extensions/market_report
+        run: |
+          if [ -f "NEW_REPORT_FILENAME.txt" ]; then
+            PDF_FILE=$(cat NEW_REPORT_FILENAME.txt)
+            
+            if [ -n "$PDF_FILE" ]; then
+              echo "Sending $PDF_FILE to Discord..."
+              curl -H "Content-Type: multipart/form-data" \
+                   -F "file1=@\"$PDF_FILE\"" \
+                   -F "payload_json={\"content\": \"**Báo cáo thị trường tổng hợp (${{ env.ROLLUP_TYPE }})**\", \"flags\": 4096, \"allowed_mentions\": {\"parse\": []}}" \
+                   $DISCORD_WEBHOOK_URL
+            fi
+            
+            # Xóa cờ sau khi gửi
+            rm "NEW_REPORT_FILENAME.txt"
+          else
+            echo "Không có file báo cáo MỚI nào được tạo trong lần chạy này. Bỏ qua bước gửi Discord."
+          fi
+
       - name: Commit and Push changes
         if: env.ROLLUP_TYPE != 'none'
         working-directory: ./extensions/market_report

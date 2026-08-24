@@ -43,8 +43,6 @@ def get_target_files(rollup_type):
             prefix = "Báo cáo Quý"
             
     all_pdfs = glob.glob(os.path.join(OUTPUT_DIR, f"{prefix} *.pdf"))
-    
-    # Sort files by creation time or name to maintain order
     all_pdfs.sort()
     return all_pdfs
 
@@ -107,10 +105,9 @@ VĂN PHONG VÀ CẤU TRÚC YÊU CẦU:
   ## PHẦN 2: DIỄN BIẾN NHÓM NGÀNH DẪN DẮT
   ## PHẦN 3: ĐỊNH VỊ RỦI RO & KHUYẾN NGHỊ CHIẾN LƯỢC
 
-DỮ LIỆU ĐẦU VÀO (Được trích xuất từ các báo cáo con):
-{combined_text[:50000]} # Limit text to avoid token overflow, 50k chars is safe
+DỮ LIỆU ĐẦU VÀO:
+{combined_text[:50000]}
 
-Lưu ý: Không dùng markdown code block bao quanh kết quả trả về, chỉ cần trả về text markdown trực tiếp.
 Bắt đầu viết Báo cáo:
 """
     max_retries = 3
@@ -201,8 +198,6 @@ def upload_market_report_to_supabase(pdf_path):
     }
     
     try:
-        # 1. Upload to Storage
-        print(f"Uploading {file_name} to Supabase Storage...")
         with open(pdf_path, 'rb') as f:
             file_bytes = f.read()
         
@@ -216,9 +211,7 @@ def upload_market_report_to_supabase(pdf_path):
             print("Failed to upload to storage:", upload_res.text)
             return
             
-        # 2. Insert to uploaded_files
         public_url = f"{SUPABASE_URL}/storage/v1/object/public/chat-files/{unique_file_name}"
-        
         db_url = f"{SUPABASE_URL}/rest/v1/uploaded_files"
         db_res = requests.post(
             db_url,
@@ -232,19 +225,15 @@ def upload_market_report_to_supabase(pdf_path):
         db_data = db_res.json()
         file_id = db_data[0]['id']
         
-        # 3. Process file via RAG backend
-        print(f"Processing file {file_id} via RAG backend...")
         process_res = requests.post(
             f"{BACKEND_URL}/process-file",
             headers={"Content-Type": "application/json"},
             json={"file_id": file_id}
         )
-        if process_res.ok:
-            print("Successfully processed market report file for RAG.")
-        else:
+        if not process_res.ok:
             print("Failed to process file on backend:", process_res.text)
     except Exception as e:
-        print("Error uploading/processing to Supabase:", str(e))
+        print("Error uploading to Supabase:", str(e))
 
 def delete_source_files(pdf_paths):
     """
@@ -260,7 +249,6 @@ def delete_source_files(pdf_paths):
         file_name = os.path.basename(path)
         print(f"Deleting {file_name}...")
         
-        # 1. Lấy file_id từ uploaded_files dựa vào file_name
         query_url = f"{SUPABASE_URL}/rest/v1/uploaded_files?file_name=eq.{requests.utils.quote(file_name)}&select=id,file_url"
         resp = requests.get(query_url, headers=headers)
         if resp.ok and len(resp.json()) > 0:
@@ -268,12 +256,8 @@ def delete_source_files(pdf_paths):
             file_id = file_data['id']
             file_url = file_data['file_url']
             
-            # Xóa khỏi bảng uploaded_files (Nếu RLS cho phép)
             del_db = requests.delete(f"{SUPABASE_URL}/rest/v1/uploaded_files?id=eq.{file_id}", headers=headers)
             
-            # Xóa Storage object
-            # Lấy object_path:
-            # https://.../chat-files/market_reports/123_Bao_cao.pdf -> market_reports/123_Bao_cao.pdf
             storage_path = ""
             if "chat-files/" in file_url:
                 storage_path = file_url.split("chat-files/")[-1]
@@ -286,9 +270,8 @@ def delete_source_files(pdf_paths):
                     headers=headers
                 )
                 
-        # 2. Xóa khỏi Git
         try:
-            subprocess.run(["git", "rm", path], check=True)
+            subprocess.run(["git", "rm", path], check=True, stdout=subprocess.DEVNULL)
             print(f"Removed {path} from git.")
         except subprocess.CalledProcessError:
             # Nếu git rm thất bại (ví dụ file chưa được commit), ta xóa bằng os.remove
@@ -313,28 +296,22 @@ def main():
     # Đọc text từ các file nguồn
     combined_text = extract_text_from_pdfs(target_files)
     if not combined_text.strip():
-        print("Không thể trích xuất văn bản từ các file nguồn. Thoát.")
+        print("No text extracted. Exiting.")
         return
         
-    # Gọi AI viết báo cáo
     title = get_rollup_title(rollup_type)
-    print(f"Đang gọi Gemini viết {title}...")
     md_text = generate_markdown_via_ai(combined_text, rollup_type, title)
     
-    # Tạo PDF
     out_pdf = f"{title}.pdf"
     print(f"Đang tạo file PDF {out_pdf}...")
     asyncio.run(build_report_pdf(md_text, title, out_pdf))
-    
-    # Upload lên Supabase
     upload_market_report_to_supabase(out_pdf)
     
-    # Nếu là Tuần hoặc Tháng, ta sẽ XÓA các báo cáo nguồn
     if rollup_type in ["weekly", "monthly"]:
-        print("Đang dọn dẹp các báo cáo nguồn...")
         delete_source_files(target_files)
         
-    print("Xong!")
+    with open("NEW_REPORT_FILENAME.txt", "w", encoding='utf-8') as f:
+        f.write(out_pdf)
 
 if __name__ == "__main__":
     main()
