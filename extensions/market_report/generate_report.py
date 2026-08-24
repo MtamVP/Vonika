@@ -12,6 +12,7 @@ from google import genai
 from playwright.async_api import async_playwright
 from dotenv import load_dotenv
 import glob
+import requests
 
 # Load .env file from rag_server directory
 env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "rag_server", ".env")
@@ -268,6 +269,66 @@ async def build_report_pdf(text_json, data_json, vietstock_csv, out_pdf):
             if os.path.exists(f):
                 os.remove(f)
 
+def upload_market_report_to_supabase(pdf_path):
+    supabase_url = "https://jqzlmzbvaesczarqptye.supabase.co"
+    supabase_key = "sb_publishable_wXUovp36dvd_VwdX-U8ecg_P-OrGwEb"
+    backend_url = "https://vonika-git-863156331978.europe-west1.run.app/api"
+    
+    file_name = os.path.basename(pdf_path)
+    unique_file_name = f"market_reports/{int(datetime.now().timestamp() * 1000)}_{file_name.replace(' ', '_')}"
+    
+    headers = {
+        "apikey": supabase_key,
+        "Authorization": f"Bearer {supabase_key}"
+    }
+    
+    try:
+        # 1. Upload to Storage
+        print(f"Uploading {file_name} to Supabase Storage...")
+        with open(pdf_path, 'rb') as f:
+            file_bytes = f.read()
+        
+        upload_url = f"{supabase_url}/storage/v1/object/chat-files/{unique_file_name}"
+        upload_res = requests.post(
+            upload_url, 
+            headers={**headers, "Content-Type": "application/pdf"}, 
+            data=file_bytes
+        )
+        if not upload_res.ok:
+            print("Failed to upload to storage:", upload_res.text)
+            return
+            
+        # 2. Insert to uploaded_files
+        print("Inserting into uploaded_files table...")
+        public_url = f"{supabase_url}/storage/v1/object/public/chat-files/{unique_file_name}"
+        
+        db_url = f"{supabase_url}/rest/v1/uploaded_files"
+        db_res = requests.post(
+            db_url,
+            headers={**headers, "Content-Type": "application/json", "Prefer": "return=representation"},
+            json={"file_name": file_name, "file_url": public_url}
+        )
+        if not db_res.ok:
+            print("Failed to insert DB:", db_res.text)
+            return
+            
+        db_data = db_res.json()
+        file_id = db_data[0]['id']
+        
+        # 3. Process file via RAG backend
+        print(f"Processing file {file_id} via RAG backend...")
+        process_res = requests.post(
+            f"{backend_url}/process-file",
+            headers={"Content-Type": "application/json"},
+            json={"file_id": file_id}
+        )
+        if process_res.ok:
+            print("Successfully processed market report file for RAG.")
+        else:
+            print("Failed to process file on backend:", process_res.text)
+    except Exception as e:
+        print("Error uploading/processing to Supabase:", str(e))
+
 if __name__ == "__main__":
     import subprocess
     import sys
@@ -310,6 +371,9 @@ if __name__ == "__main__":
         sys.exit(1)
     else:
         asyncio.run(build_report_pdf(text_path, data_path, csv_path, out_path))
+        
+        # Tự động upload báo cáo mới lên Supabase
+        upload_market_report_to_supabase(out_path)
         
         # Đánh dấu đã tạo file thành công trong phiên chạy này
         with open("NEW_REPORT_GENERATED", "w") as f:

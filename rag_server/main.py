@@ -20,7 +20,10 @@ def process_file(req: models.ProcessFileRequest):
     
     file_name = file_info.get("file_name", "")
     file_url = file_info.get("file_url", "")
-    storage_path = file_url.split("/")[-1] if file_url else ""
+    if file_url and "chat-files/" in file_url:
+        storage_path = file_url.split("chat-files/")[-1]
+    else:
+        storage_path = file_url.split("/")[-1] if file_url else ""
     
     supabase_client.delete_chunks_by_file_id(req.file_id)
     file_bytes = supabase_client.download_file("chat-files", storage_path)

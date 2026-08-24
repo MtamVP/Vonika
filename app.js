@@ -733,10 +733,16 @@ function setupFileInteraction(fileItem, fileData, storageName) {
 
 async function checkStorageLimit(newFileSize = 0) {
   try {
-    const { data, error } = await supabaseClient.storage.from("chat-files").list("", { limit: 10000 });
-    if (error) throw error;
+    const { data: usersData, error: usersError } = await supabaseClient.storage.from("chat-files").list("users_files", { limit: 10000 });
+    const { data: marketData, error: marketError } = await supabaseClient.storage.from("chat-files").list("market_reports", { limit: 10000 });
     
-    const currentTotalSize = data.reduce((sum, f) => sum + (f.metadata?.size || 0), 0);
+    if (usersError) throw usersError;
+    if (marketError) throw marketError;
+    
+    let currentTotalSize = 0;
+    if (usersData) currentTotalSize += usersData.reduce((sum, f) => sum + (f.metadata?.size || 0), 0);
+    if (marketData) currentTotalSize += marketData.reduce((sum, f) => sum + (f.metadata?.size || 0), 0);
+    
     const ONE_GB = 1024 * 1024 * 1024;
     
     // Luôn luôn cập nhật UI với tổng dung lượng mới nhất
@@ -817,12 +823,12 @@ async function processFilesUpload(files) {
     try {
       const { error: storageError } = await supabaseClient.storage
         .from("chat-files")
-        .upload(uniqueFileName, file);
+        .upload(`users_files/${uniqueFileName}`, file);
       if (storageError) throw storageError;
 
       const { data: publicUrlData } = supabaseClient.storage
         .from("chat-files")
-        .getPublicUrl(uniqueFileName);
+        .getPublicUrl(`users_files/${uniqueFileName}`);
       const fileUrl = publicUrlData.publicUrl;
 
       const { data: dbData, error: dbError } = await supabaseClient
@@ -900,13 +906,13 @@ async function uploadPasteFile(text) {
 
     const { error: storageError } = await supabaseClient.storage
       .from("chat-files")
-      .upload(uniqueFileName, file);
+      .upload(`users_files/${uniqueFileName}`, file);
 
     if (storageError) throw storageError;
 
     const { data: publicUrlData } = supabaseClient.storage
       .from("chat-files")
-      .getPublicUrl(uniqueFileName);
+      .getPublicUrl(`users_files/${uniqueFileName}`);
     const fileUrl = publicUrlData.publicUrl;
 
     const { data: dbData, error: dbError } = await supabaseClient
@@ -1014,7 +1020,13 @@ function renderFiles(fileData) {
   fileList.appendChild(fileItem);
 
   const fileUrl = fileData.file_url;
-  const fileNameInStorage = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+  const chatFilesIndex = fileUrl.indexOf("chat-files/");
+  let fileNameInStorage = "";
+  if (chatFilesIndex !== -1) {
+      fileNameInStorage = fileUrl.substring(chatFilesIndex + "chat-files/".length);
+  } else {
+      fileNameInStorage = fileUrl.substring(fileUrl.lastIndexOf("/") + 1);
+  }
 
   setupFileInteraction(fileItem, fileData, fileNameInStorage);
 }
