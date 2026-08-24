@@ -1,0 +1,92 @@
+name: Rolling Report Aggregation
+
+on:
+  schedule:
+    # 02:00 UTC Thứ 7 hàng tuần -> Báo cáo Tuần
+    - cron: '0 2 * * 6'
+    # 03:00 UTC Mùng 1 hàng tháng -> Báo cáo Tháng
+    - cron: '0 3 1 * *'
+    # 04:00 UTC Mùng 1 các tháng 1,4,7,10 -> Báo cáo Quý
+    - cron: '0 4 1 1,4,7,10 *'
+    # 05:00 UTC Mùng 1 các tháng 1,7 -> Báo cáo Nửa năm
+    - cron: '0 5 1 1,7 *'
+    # 06:00 UTC Mùng 1 tháng 1 -> Báo cáo Năm
+    - cron: '0 6 1 1 *'
+  workflow_dispatch:
+    inputs:
+      rollup_type:
+        description: 'Loại báo cáo muốn tổng hợp'
+        required: true
+        type: choice
+        options:
+          - weekly
+          - monthly
+          - quarterly
+          - halfyear
+          - yearly
+
+jobs:
+  rollup-job:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install pandas matplotlib markdown google-genai playwright python-dotenv requests pdfplumber pymupdf supabase
+          playwright install chromium
+
+      - name: Determine Rollup Type
+        id: determine_type
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "ROLLUP_TYPE=${{ github.event.inputs.rollup_type }}" >> $GITHUB_ENV
+          else
+            # Extract cron schedule that triggered this run
+            # GitHub actions doesn't natively expose the specific cron that triggered it if multiple exist, 
+            # so we infer by time/day (approximate UTC time when triggered).
+            CURRENT_DAY_OF_WEEK=$(date +%u)
+            CURRENT_DAY=$(date +%d)
+            CURRENT_MONTH=$(date +%m)
+            CURRENT_HOUR=$(date +%H)
+            
+            # Mặc định (phòng trường hợp lỗi)
+            ROLLUP_TYPE="none"
+            
+            # Logic kiểm tra dựa trên giờ chạy (02:00 -> 06:00 UTC)
+            if [ "$CURRENT_HOUR" = "02" ]; then ROLLUP_TYPE="weekly"
+            elif [ "$CURRENT_HOUR" = "03" ]; then ROLLUP_TYPE="monthly"
+            elif [ "$CURRENT_HOUR" = "04" ]; then ROLLUP_TYPE="quarterly"
+            elif [ "$CURRENT_HOUR" = "05" ]; then ROLLUP_TYPE="halfyear"
+            elif [ "$CURRENT_HOUR" = "06" ]; then ROLLUP_TYPE="yearly"
+            fi
+            
+            echo "ROLLUP_TYPE=$ROLLUP_TYPE" >> $GITHUB_ENV
+          fi
+
+      - name: Run Rollup Report
+        if: env.ROLLUP_TYPE != 'none'
+        env:
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        working-directory: ./extensions/market_report
+        run: |
+          python rollup_reports.py --type ${{ env.ROLLUP_TYPE }}
+
+      - name: Commit and Push changes
+        if: env.ROLLUP_TYPE != 'none'
+        working-directory: ./extensions/market_report
+        run: |
+          git config --global user.name "GitHub Action Rollup"
+          git config --global user.email "action@github.com"
+          git add "*.pdf"
+          git commit -m "Auto-generated ${{ env.ROLLUP_TYPE }} rollup report" || echo "No changes to commit"
+          git push
