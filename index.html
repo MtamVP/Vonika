@@ -40,13 +40,13 @@
                     <p class="empty-desc">Thêm tệp, hoặc nội dung khác. Sau đó, hãy đặt câu hỏi hoặc tạo nội dung dựa trên các nguồn này.</p>
                     <p class="empty-action">Thả tệp vào đây hoặc <span class="empty-link" onclick="document.querySelector('#open-modal-btn').click()">thêm nguồn</span></p>
                 </div>
-                <div id="users-files-section" style="display: none; margin-top: 10px;">
+                <div id="users-files-section" style="display: none; margin-top: 10px; width: 100%;">
                     <h4 class="category-header">TÀI LIỆU CỦA BẠN</h4>
-                    <div id="users-files-container"></div>
+                    <div id="users-files-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;"></div>
                 </div>
-                <div id="market-reports-section" style="display: none; margin-top: 20px;">
+                <div id="market-reports-section" style="display: none; margin-top: 20px; width: 100%;">
                     <h4 class="category-header">BÁO CÁO THỊ TRƯỜNG</h4>
-                    <div id="market-reports-container"></div>
+                    <div id="market-reports-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;"></div>
                 </div>
             </div>
         </aside>
@@ -192,13 +192,13 @@
         <div class="modal-container">
             <button class="modal-close" id="close-selected-files-modal-btn"><i class="fa-solid fa-xmark"></i></button>
             <div class="selected-files-list" id="selected-files-list">
-                <div id="attach-users-files-section" style="display: none; margin-top: 10px;">
+                <div id="attach-users-files-section" style="display: none; margin-top: 10px; width: 100%;">
                     <h4 class="category-header">TÀI LIỆU CỦA BẠN</h4>
-                    <div id="attach-users-files-container"></div>
+                    <div id="attach-users-files-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;"></div>
                 </div>
-                <div id="attach-market-reports-section" style="display: none; margin-top: 20px;">
+                <div id="attach-market-reports-section" style="display: none; margin-top: 20px; width: 100%;">
                     <h4 class="category-header">BÁO CÁO THỊ TRƯỜNG</h4>
-                    <div id="attach-market-reports-container"></div>
+                    <div id="attach-market-reports-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;"></div>
                 </div>
             </div>
         </div>
