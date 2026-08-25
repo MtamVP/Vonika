@@ -872,7 +872,13 @@ async function processFilesUpload(files) {
             <div class="file-chip-name" title="${fileName}">${fileName}</div>
             <div class="file-chip-status status-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
         `;
-    fileList.appendChild(fileItem);
+    const usersContainer = document.getElementById('users-files-container');
+    const usersSection = document.getElementById('users-files-section');
+    if (usersContainer) usersContainer.appendChild(fileItem);
+    if (usersSection) usersSection.style.display = 'block';
+    
+    const emptyMsg = document.getElementById('empty-message');
+    if (emptyMsg) emptyMsg.style.display = 'none';
 
     try {
       const { error: storageError } = await supabaseClient.storage
@@ -956,7 +962,13 @@ async function uploadPasteFile(text) {
             <div class="file-chip-name" title="${fileName}">${fileName}</div>
             <div class="file-chip-status status-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
         `;
-    if (fileList) fileList.appendChild(fileItem);
+    const usersContainer = document.getElementById('users-files-container');
+    const usersSection = document.getElementById('users-files-section');
+    if (usersContainer) usersContainer.appendChild(fileItem);
+    if (usersSection) usersSection.style.display = 'block';
+    
+    const emptyMsg = document.getElementById('empty-message');
+    if (emptyMsg) emptyMsg.style.display = 'none';
 
     const { error: storageError } = await supabaseClient.storage
       .from("chat-files")
@@ -1071,7 +1083,20 @@ function renderFiles(fileData) {
         <div class="file-chip-status">
         </div>
     `;
-  fileList.appendChild(fileItem);
+  const emptyMsg = document.getElementById('empty-message');
+  if (emptyMsg) emptyMsg.style.display = 'none';
+
+  if (fileData.category === 'market_reports') {
+      const mrContainer = document.getElementById('market-reports-container');
+      const mrSection = document.getElementById('market-reports-section');
+      if (mrContainer) mrContainer.appendChild(fileItem);
+      if (mrSection) mrSection.style.display = 'block';
+  } else {
+      const usersContainer = document.getElementById('users-files-container');
+      const usersSection = document.getElementById('users-files-section');
+      if (usersContainer) usersContainer.appendChild(fileItem);
+      if (usersSection) usersSection.style.display = 'block';
+  }
 
   const fileUrl = fileData.file_url;
   const chatFilesIndex = fileUrl.indexOf("chat-files/");
@@ -1102,12 +1127,13 @@ function updateSelectedFilesCount() {
 
 function showSelectedFiles() {
   if (corpusFiles.size > 0) {
-    let fileListHTML = "";
+    let usersHTML = "";
+    let marketHTML = "";
 
     corpusFiles.forEach((fileData) => {
       const fileIdStr = String(fileData.id);
       const isChecked = selectedAttachFiles.has(fileIdStr) ? "checked" : "";
-      fileListHTML += `
+      const liHTML = `
             <li style="padding: 0;">
                 <label style="display: flex; align-items: center; gap: 10px; width: 100%; cursor: pointer; padding: 8px 12px; margin: 0;">
                     <input type="checkbox" class="select-checkbox" value="${fileIdStr}" ${isChecked}>
@@ -1115,28 +1141,53 @@ function showSelectedFiles() {
                 </label>
             </li>
         `;
+      if (fileData.category === 'market_reports') {
+          marketHTML += liHTML;
+      } else {
+          usersHTML += liHTML;
+      }
     });
 
     const fileListContainer = document.getElementById("selected-files-list");
     const allSelected = selectedAttachFiles.size === corpusFiles.size;
-    const selectAllChecked =
-      allSelected && corpusFiles.size > 0 ? "checked" : "";
+    const selectAllChecked = allSelected && corpusFiles.size > 0 ? "checked" : "";
 
-    fileListContainer.innerHTML = `
-        <div class="selected-files-header" style="padding-left: 12px;">
+    let finalHTML = `
+        <div class="selected-files-header" style="padding-left: 12px; margin-bottom: 15px;">
             <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; width: 100%;">
                 <input type="checkbox" id="select-all-checkbox" ${selectAllChecked}>
                 <span style="font-weight: 500;">Chọn tất cả</span>
             </label>
         </div>
-        <ul class="selected-files">
-            ${fileListHTML}
-        </ul>
     `;
+
+    if (usersHTML) {
+        finalHTML += `
+            <div style="margin-bottom: 20px;">
+                <h4 class="category-header">TÀI LIỆU CỦA BẠN</h4>
+                <ul class="selected-files" style="margin-bottom: 0;">
+                    ${usersHTML}
+                </ul>
+            </div>
+        `;
+    }
+
+    if (marketHTML) {
+        finalHTML += `
+            <div>
+                <h4 class="category-header">BÁO CÁO THỊ TRƯỜNG</h4>
+                <ul class="selected-files" style="margin-bottom: 0;">
+                    ${marketHTML}
+                </ul>
+            </div>
+        `;
+    }
+
+    fileListContainer.innerHTML = finalHTML;
     updateSelectedFilesCount();
   } else {
     updateSelectedFilesCount();
-    showToast("Chưa có file nào được tải lên. Vui lòng tải file lên trước.");
+    showToast("Chưa có file nào được tải lên. Vui lòng tải file lên trước.", "warning");
   }
 }
 

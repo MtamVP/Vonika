@@ -34,11 +34,19 @@
             </button>
             
             <div class="file-list" id="file-list">
-                <div class="empty-message">
+                <div class="empty-message" id="empty-message">
                     <span class="material-symbols-outlined empty-icon"><i class="fa-solid fa-file"></i></span>
                     <p class="empty-title">Các nguồn đã lưu sẽ xuất hiện ở đây</p>
                     <p class="empty-desc">Thêm tệp, hoặc nội dung khác. Sau đó, hãy đặt câu hỏi hoặc tạo nội dung dựa trên các nguồn này.</p>
                     <p class="empty-action">Thả tệp vào đây hoặc <span class="empty-link" onclick="document.querySelector('#open-modal-btn').click()">thêm nguồn</span></p>
+                </div>
+                <div id="users-files-section" style="display: none; margin-top: 10px;">
+                    <h4 class="category-header">TÀI LIỆU CỦA BẠN</h4>
+                    <div id="users-files-container"></div>
+                </div>
+                <div id="market-reports-section" style="display: none; margin-top: 20px;">
+                    <h4 class="category-header">BÁO CÁO THỊ TRƯỜNG</h4>
+                    <div id="market-reports-container"></div>
                 </div>
             </div>
         </aside>
@@ -184,6 +192,14 @@
         <div class="modal-container">
             <button class="modal-close" id="close-selected-files-modal-btn"><i class="fa-solid fa-xmark"></i></button>
             <div class="selected-files-list" id="selected-files-list">
+                <div id="attach-users-files-section" style="display: none; margin-top: 10px;">
+                    <h4 class="category-header">TÀI LIỆU CỦA BẠN</h4>
+                    <div id="attach-users-files-container"></div>
+                </div>
+                <div id="attach-market-reports-section" style="display: none; margin-top: 20px;">
+                    <h4 class="category-header">BÁO CÁO THỊ TRƯỜNG</h4>
+                    <div id="attach-market-reports-container"></div>
+                </div>
             </div>
         </div>
     </div>

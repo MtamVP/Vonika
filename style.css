@@ -1675,6 +1675,16 @@ button#send-btn svg {
 @keyframes toastSlideIn { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
 @keyframes fadeOutRight { to { transform: translateX(120%); opacity: 0; } }
 
+/* Categories */
+.category-header {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--color-text-tertiary, #9CA3AF);
+  margin: 0 0 8px 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
 /* Extension Grid */
 .extension-grid {
   display: grid;
