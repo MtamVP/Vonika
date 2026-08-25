@@ -629,41 +629,28 @@ if (marketReportModal) {
 const triggerReportBtn = document.getElementById('trigger-report-btn');
 if (triggerReportBtn) {
     triggerReportBtn.addEventListener('click', async () => {
-        let githubToken = localStorage.getItem('github_pat');
-        if (!githubToken) {
-            githubToken = prompt("Để kích hoạt tự động từ xa, vui lòng nhập mã GitHub Personal Access Token (PAT):\n\n(Yên tâm nhé! Mã này chỉ lưu tạm trong trình duyệt máy tính của bạn chứ không lưu vào code, nên rất an toàn và dùng được cho những lần sau)");
-            if (!githubToken) return;
-            localStorage.setItem('github_pat', githubToken);
-        }
-
         const btnOriginalText = triggerReportBtn.innerHTML;
         triggerReportBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang gửi lệnh...';
         triggerReportBtn.disabled = true;
 
         try {
-            const response = await fetch('https://api.github.com/repos/MtamVP/Vonika/actions/workflows/market_report.yml/dispatches', {
+            const response = await fetch(`${backend_url}/trigger-github-action`, {
                 method: 'POST',
                 headers: {
-                    'Accept': 'application/vnd.github.v3+json',
-                    'Authorization': `Bearer ${githubToken}`,
                     'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    ref: 'main'
-                })
+                }
             });
 
             if (response.ok) {
                 showToast("Đã kích hoạt thành công! Báo cáo đang được tạo trên GitHub.", "success");
-            } else if (response.status === 401 || response.status === 403 || response.status === 404) {
-                showToast("Lỗi xác thực: Token không hợp lệ hoặc không có quyền (cần cấp quyền 'repo').", "error");
-                localStorage.removeItem('github_pat');
             } else {
-                showToast(`Lỗi: ${response.statusText}`, "error");
+                const errorData = await response.json().catch(() => ({}));
+                const errorMsg = errorData.detail || response.statusText;
+                showToast(`Lỗi: ${errorMsg}`, "error");
             }
         } catch (error) {
             console.error("Trigger Action Error:", error);
-            showToast("Không thể kết nối đến GitHub API", "error");
+            showToast("Không thể kết nối đến Backend Server", "error");
         } finally {
             triggerReportBtn.innerHTML = btnOriginalText;
             triggerReportBtn.disabled = false;

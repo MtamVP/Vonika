@@ -94,3 +94,26 @@ def jina_search(q: str):
     }
     response = requests.get(url, headers=headers)
     return Response(content=response.text, media_type="text/plain")
+
+@app.post("/api/trigger-github-action")
+def trigger_github_action():
+    github_pat = os.getenv("GITHUB_PAT")
+    if not github_pat:
+        raise HTTPException(status_code=500, detail="GITHUB_PAT not configured on server")
+    
+    url = "https://api.github.com/repos/MtamVP/Vonika/actions/workflows/market_report.yml/dispatches"
+    headers = {
+        "Accept": "application/vnd.github.v3+json",
+        "Authorization": f"Bearer {github_pat}",
+        "Content-Type": "application/json"
+    }
+    payload = {"ref": "main"}
+    
+    try:
+        response = requests.post(url, headers=headers, json=payload)
+        if response.status_code in (200, 204):
+            return {"status": "success", "message": "Action triggered successfully"}
+        else:
+            raise HTTPException(status_code=response.status_code, detail=f"GitHub API Error: {response.text}")
+    except requests.exceptions.RequestException as e:
+        raise HTTPException(status_code=500, detail=str(e))
