@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Vonika-Finance Chatbot</title>
+    <title>Vonika</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -101,13 +101,42 @@
             <div class="extension-header">
                 <h2 class="sidebar-title">Tiện ích mở rộng</h2>
             </div>
-            <div class="extension-placeholder">
-                <p>Sắp ra mắt...</p>
+            <div class="extension-grid">
+                <div class="ext-card" id="ext-market-report-btn">
+                    <div class="ext-card-icon" style="color: #FFB300;">
+                        <i class="fa-solid fa-file-invoice"></i>
+                    </div>
+                    <div class="ext-card-content">
+                        <span class="ext-card-title">Báo cáo thị trường</span>
+                    </div>
+                    <div class="ext-card-arrow">
+                        <i class="fa-solid fa-chevron-right"></i>
+                    </div>
+                </div>
             </div>
         </aside>
     </div>
 
     <!-- MODALS -->
+    <div class="modal-overlay" id="market-report-modal">
+        <div class="modal-container">
+            <button class="modal-close" id="close-market-report-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="modal-title">Tạo báo cáo thị trường tự động</h3>
+            <div class="modal-content">
+                <p style="margin-bottom: 15px; color: var(--color-text-secondary); line-height: 1.5; font-size: 14px;">Hệ thống sẽ tự động tổng hợp dữ liệu giao dịch và nhận định chuyên gia để tạo báo cáo thị trường hằng ngày, hàng tuần, hàng tháng.</p>
+                <div style="background: var(--color-bg-muted); padding: 15px; border-radius: 8px; font-size: 13px;">
+                    <p style="margin-bottom: 10px;"><i class="fa-solid fa-clock" style="color: var(--color-text-secondary); margin-right: 8px;"></i>Tự động chạy qua GitHub Actions lúc 19:30 hàng ngày.</p>
+                    <p style="margin-bottom: 10px;"><i class="fa-brands fa-discord" style="color: #5865F2; margin-right: 8px;"></i>Gửi báo cáo qua Server Discord.</p>
+                    <p><i class="fa-solid fa-database" style="color: #3ECF8E; margin-right: 8px;"></i>Đồng bộ file lên Supabase để Chatbot phân tích.</p>
+                </div>
+            </div>
+            <div class="modal-actions" style="margin-top: 20px; display: flex; gap: 10px;">
+                <button class="modal-btn" id="trigger-report-btn"><i class="fa-solid fa-play" style="color: #10b981;"></i> Chạy báo cáo ngay</button>
+                <button class="modal-btn" onclick="window.open('https://github.com/MtamVP/Vonika/actions/workflows/market_report.yml', '_blank')"><i class="fa-solid fa-arrow-up-right-from-square"></i> Xem lịch sử chạy</button>
+            </div>
+        </div>
+    </div>
+
     <div class="modal-overlay" id="upload-modal">
         <div class="modal-container">
             <button class="modal-close" id="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>

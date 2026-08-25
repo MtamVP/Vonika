@@ -189,8 +189,10 @@ async def build_report_pdf(md_text, title, out_pdf):
         os.remove(temp_html_path)
 
 def upload_market_report_to_supabase(pdf_path):
+    import unicodedata
     file_name = os.path.basename(pdf_path)
-    unique_file_name = f"market_reports/{int(datetime.now().timestamp() * 1000)}_{file_name.replace(' ', '_')}"
+    safe_name = unicodedata.normalize('NFKD', file_name).encode('ASCII', 'ignore').decode('utf-8')
+    unique_file_name = f"market_reports/{int(datetime.now().timestamp() * 1000)}_{safe_name.replace(' ', '_')}"
     
     headers = {
         "apikey": SUPABASE_KEY,

@@ -270,12 +270,14 @@ async def build_report_pdf(text_json, data_json, vietstock_csv, out_pdf):
                 os.remove(f)
 
 def upload_market_report_to_supabase(pdf_path):
+    import unicodedata
     supabase_url = "https://jqzlmzbvaesczarqptye.supabase.co"
     supabase_key = "sb_publishable_wXUovp36dvd_VwdX-U8ecg_P-OrGwEb"
     backend_url = "https://vonika-git-863156331978.europe-west1.run.app/api"
     
     file_name = os.path.basename(pdf_path)
-    unique_file_name = f"market_reports/{int(datetime.now().timestamp() * 1000)}_{file_name.replace(' ', '_')}"
+    safe_name = unicodedata.normalize('NFKD', file_name).encode('ASCII', 'ignore').decode('utf-8')
+    unique_file_name = f"market_reports/{int(datetime.now().timestamp() * 1000)}_{safe_name.replace(' ', '_')}"
     
     headers = {
         "apikey": supabase_key,
@@ -380,8 +382,14 @@ if __name__ == "__main__":
             f.write("OK")
 
     for old_report in glob.glob(os.path.join(OUTPUT_DIR, "Báo cáo thị trường ngày *.pdf")):
-        if os.path.abspath(old_report) != os.path.abspath(out_path):
+        # We need to make sure out_path is also absolute when comparing
+        if os.path.abspath(old_report) != os.path.abspath(os.path.join(OUTPUT_DIR, out_path)):
             try:
-                os.remove(old_report)
-            except OSError:
-                pass
+                subprocess.run(["git", "rm", old_report], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                print(f"Removed {old_report} from git.")
+            except Exception:
+                try:
+                    os.remove(old_report)
+                    print(f"Deleted local file {old_report}.")
+                except OSError:
+                    pass
