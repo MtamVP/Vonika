@@ -218,7 +218,7 @@ def upload_market_report_to_supabase(pdf_path):
         db_res = requests.post(
             db_url,
             headers={**headers, "Content-Type": "application/json", "Prefer": "return=representation"},
-            json={"file_name": file_name, "file_url": public_url}
+            json={"file_name": file_name, "file_url": public_url, "category": "market_reports"}
         )
         if not db_res.ok:
             print("Failed to insert DB:", db_res.text)
