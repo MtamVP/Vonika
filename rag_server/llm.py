@@ -94,18 +94,41 @@ def generate_answer(query: str, context_chunks: list[dict], chat_history: list[d
             
         print(f"Vượt token an toàn, đang tự động giảm bớt context_chunks. Hiện còn {len(context_chunks)} chunks.")
     
-    max_retries = 3
-    for attempt in range(max_retries):
-        try:
-            response = client.models.generate_content(
-                model=model_name,
-                contents=prompt
-            )
-            return response.text, total_tokens
-        except Exception as e:
-            error_str = str(e)
-            if attempt < max_retries - 1 and ("503" in error_str or "429" in error_str or "UNAVAILABLE" in error_str):
-                time.sleep(2 ** attempt)  # Exponential backoff: 1s, 2s
-                continue
-            raise HTTPException(status_code=502, detail=f"Lỗi từ Google AI (Model '{model_name}'): {error_str}")
+    fallback_models = []
+    if "3.7" in model_name:
+        fallback_models = [model_name.replace("3.7", "3.6"), model_name.replace("3.7", "3.5"), model_name.replace("3.7", "2.5")]
+    elif "3.6" in model_name:
+        fallback_models = [model_name.replace("3.6", "3.5"), model_name.replace("3.6", "2.5")]
+    elif "3.5" in model_name:
+        fallback_models = [model_name.replace("3.5", "2.5")]
+    elif "2.5" in model_name and "pro" in model_name:
+        fallback_models = ["gemini-2.5-flash"]
+        
+    models_to_try = [model_name] + fallback_models
+    
+    max_retries_per_model = 2
+    last_error_str = ""
+    
+    for current_model in models_to_try:
+        for attempt in range(max_retries_per_model):
+            try:
+                response = client.models.generate_content(
+                    model=current_model,
+                    contents=prompt
+                )
+                return response.text, total_tokens
+            except Exception as e:
+                error_str = str(e)
+                last_error_str = error_str
+                if "503" in error_str or "429" in error_str or "UNAVAILABLE" in error_str or "overloaded" in error_str.lower():
+                    if attempt < max_retries_per_model - 1:
+                        time.sleep(2 ** attempt)
+                        continue
+                    else:
+                        print(f"Model {current_model} quá tải, thử fallback model...")
+                        break # Chuyển sang model backup
+                else:
+                    raise HTTPException(status_code=502, detail=f"Lỗi từ Google AI (Model '{current_model}'): {error_str}")
+                    
+    raise HTTPException(status_code=502, detail=f"Tất cả các model (kể cả backup) đều quá tải. Lỗi: {last_error_str}")
         
