@@ -217,11 +217,17 @@ const chatTitle = document.querySelector("#chat-title");
 const sendBtn = document.querySelector("#send-btn");
 const newChatBtn = document.getElementById("new-chat-btn");
 
-function scrollToBottom() {
+function scrollToBottom(smooth = false, delay = 0) {
   if (chatBox) {
-    setTimeout(() => {
-      chatBox.scrollTop = chatBox.scrollHeight;
-    }, 1);
+    if (delay > 0) {
+      setTimeout(() => {
+        if (smooth) chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+        else chatBox.scrollTop = chatBox.scrollHeight;
+      }, delay);
+    } else {
+        if (smooth) chatBox.scrollTo({ top: chatBox.scrollHeight, behavior: 'smooth' });
+        else chatBox.scrollTop = chatBox.scrollHeight;
+    }
   }
 }
 
@@ -362,24 +368,27 @@ function parseAndRenderAIMessage(messageEl, rawContent, shouldStream = false) {
     if (shouldStream) {
         contentContainer.innerHTML = `<div class="markdown-body"></div>`;
         const mdBody = contentContainer.querySelector('.markdown-body');
-        const charsPerSecond = 1600;
-        const startTime = performance.now();
+        let currentIndex = 0;
+        const totalDuration = 800;
+        const intervalMs = 35;
+        const totalSteps = totalDuration / intervalMs;
+        const charsPerStep = Math.max(5, Math.ceil(answer.length / totalSteps));
 
-        function tick(now) {
-            const elapsed = now - startTime;
-            const currentIndex = Math.min(answer.length, Math.floor(elapsed / 1000 * charsPerSecond));
-            const currentText = answer.substring(0, currentIndex);
-            mdBody.innerHTML = (window.marked ? marked.parse(currentText) : currentText) +
-                (currentIndex < answer.length ? '<span class="rag-typing-cursor"></span>' : '');
-            scrollToBottom();
-            if (currentIndex < answer.length) {
-                requestAnimationFrame(tick);
-            } else {
+        const interval = setInterval(() => {
+            currentIndex += charsPerStep;
+            if (currentIndex >= answer.length) {
+                currentIndex = answer.length;
+                clearInterval(interval);
+                mdBody.innerHTML = window.marked ? marked.parse(answer) : answer;
                 contentContainer.appendChild(footerDiv);
                 if (suggestionsDiv) messageEl.appendChild(suggestionsDiv);
+                scrollToBottom(true, 50);
+            } else {
+                const currentText = answer.substring(0, currentIndex);
+                mdBody.innerHTML = (window.marked ? marked.parse(currentText) : currentText) + '<span class="rag-typing-cursor"></span>';
+                scrollToBottom(false, 0);
             }
-        }
-        requestAnimationFrame(tick);
+        }, intervalMs);
     } else {
         const parsedAnswer = window.marked ? marked.parse(answer) : answer;
         contentContainer.innerHTML = `<div class="markdown-body">${parsedAnswer}</div>`;
@@ -413,7 +422,7 @@ async function loadMessages() {
         currentChatId = message.id;
       }
     });
-    scrollToBottom();
+    scrollToBottom(false, 100);
   }
 }
 
@@ -439,7 +448,7 @@ async function sendMessages(text) {
   userEl.className = "message-users";
   userEl.innerHTML = `<div class="content">${text}</div>`;
   chatArea.appendChild(userEl);
-  scrollToBottom();
+  scrollToBottom(true, 50);
 
   sendBtn.disabled = true;
   chatInput.disabled = true;
@@ -464,7 +473,7 @@ async function sendMessages(text) {
       </div>
     </div>`;
     chatArea.appendChild(loadingEl);
-    scrollToBottom();
+    scrollToBottom(true, 50);
 
     const fileIds = Array.from(selectedAttachFiles);
     let { answer, sources, tokens } = await fetchAIResponse(text, fileIds, currentChatId);
@@ -479,8 +488,6 @@ async function sendMessages(text) {
     }
 
     parseAndRenderAIMessage(loadingEl, contentToSave, true);
-    
-    scrollToBottom();
 
     await supabaseClient
       .from("chat_messages")
