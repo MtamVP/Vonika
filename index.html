@@ -68,7 +68,7 @@
                     <button class="toggle-sidebar-btn" id="theme-toggle-btn" title="Chuyển đổi Sáng/Tối">
                         <i class="fa-solid fa-moon"></i>
                     </button>
-                    <button class="new-chat-btn" id="new-chat-btn" title="Đoạn chat mới"><i class="fa-solid fa-plus"></i> New chat</button>
+                    <button class="new-chat-btn" id="new-chat-btn" title="Đoạn chat mới"><i class="fa-solid fa-plus"></i> Tạo mới</button>
                     <button class="toggle-sidebar-btn" id="toggle-right-btn" title="Đóng/Mở Tiện ích (Extensions)">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
@@ -131,7 +131,7 @@
             <button class="modal-close" id="close-market-report-modal-btn"><i class="fa-solid fa-xmark"></i></button>
             <h3 class="modal-title">Tạo báo cáo thị trường tự động</h3>
             <div class="modal-content">
-                <p style="margin-bottom: 15px; color: var(--color-text-secondary); line-height: 1.5; font-size: 14px;">Hệ thống sẽ tự động tổng hợp dữ liệu giao dịch và nhận định chuyên gia để tạo báo cáo thị trường hằng ngày, hàng tuần, hàng tháng.</p>
+                <p style="margin-bottom: 15px; color: var(--color-text-secondary); line-height: 1.5; font-size: 14px;">Hệ thống sẽ tự động tổng hợp dữ liệu giao dịch và phân tích để tạo báo cáo thị trường hằng ngày, hàng tuần, hàng tháng.</p>
                 <div style="background: var(--color-bg-muted); padding: 15px; border-radius: 8px; font-size: 13px;">
                     <p style="margin-bottom: 10px;"><i class="fa-solid fa-clock" style="color: var(--color-text-secondary); margin-right: 8px;"></i>Tự động chạy qua GitHub Actions lúc 19:30 hàng ngày.</p>
                     <p style="margin-bottom: 10px;"><i class="fa-brands fa-discord" style="color: #5865F2; margin-right: 8px;"></i>Gửi báo cáo qua Server Discord.</p>
@@ -241,30 +241,7 @@
                     </div>
                 </div>
 
-                <div class="setting-item">
-                    <div class="setting-icon">
-                        <i class="fa-solid fa-list-ol"></i>
-                    </div>
-                    <div class="setting-info">
-                        <h4 class="setting-name">Số lượng trích dẫn</h4>
-                        <p class="setting-description">Số lượng kết quả tìm kiếm tốt nhất khi trả lời</p>
-                    </div>
-                    <div class="setting-control">
-                        <select class="setting-select" id="top-k-select">
-                            <option value="3">3 đoạn</option>
-                            <option value="5" selected>5 đoạn</option>
-                            <option value="8">8 đoạn</option>
-                            <option value="10">10 đoạn</option>
-                            <option value="20">20 đoạn</option>
-                            <option value="50">50 đoạn</option>
-                        </select>
-                    </div>
                 </div>
-
-
-
-
-            </div>
                 
         </div>
     </div>

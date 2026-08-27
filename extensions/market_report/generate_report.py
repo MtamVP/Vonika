@@ -317,17 +317,29 @@ def upload_market_report_to_supabase(pdf_path):
         db_data = db_res.json()
         file_id = db_data[0]['id']
         
-        # 3. Process file via RAG backend
+        # 3. Process file via RAG backend (with Retry/Backoff for Cloud Run cold starts)
         print(f"Processing file {file_id} via RAG backend...")
-        process_res = requests.post(
-            f"{backend_url}/process-file",
-            headers={"Content-Type": "application/json"},
-            json={"file_id": file_id}
-        )
-        if process_res.ok:
-            print("Successfully processed market report file for RAG.")
-        else:
-            print("Failed to process file on backend:", process_res.text)
+        import time
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                process_res = requests.post(
+                    f"{backend_url}/process-file",
+                    headers={"Content-Type": "application/json"},
+                    json={"file_id": file_id},
+                    timeout=30
+                )
+                if process_res.ok:
+                    print("Successfully processed market report file for RAG.")
+                    break
+                else:
+                    print(f"Failed to process file on backend (Attempt {attempt+1}):", process_res.text)
+                    if attempt < max_retries - 1:
+                        time.sleep(10 * (attempt + 1))
+            except Exception as e:
+                print(f"Error calling backend (Attempt {attempt+1}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(10 * (attempt + 1))
     except Exception as e:
         print("Error uploading/processing to Supabase:", str(e))
 

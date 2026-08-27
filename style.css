@@ -1752,3 +1752,19 @@ button#send-btn svg {
   transform: translateX(2px);
   color: var(--color-text-secondary);
 }
+
+/* Typing Cursor for Streaming */
+.rag-typing-cursor {
+  display: inline-block;
+  width: 8px;
+  height: 1em;
+  background-color: var(--color-text-primary);
+  margin-left: 2px;
+  vertical-align: middle;
+  animation: blink 1s step-end infinite;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}

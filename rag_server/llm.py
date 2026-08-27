@@ -51,11 +51,11 @@ def generate_answer(query: str, context_chunks: list[dict], chat_history: list[d
     #     if not context_chunks:
     #         return "Bạn đang chọn chế độ Không dùng AI. Không tìm thấy tài liệu nào phù hợp.", 0
     #     return "Chế độ Không dùng AI. Tài liệu thô tìm được:\n\n" + "\n\n".join([f"[{i+1}] {c['content']}" for i, c in enumerate(context_chunks)]), 0
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
-        raise ValueError("GEMINI_API_KEY environment variable is missing.")
+    api_keys = [v for k, v in os.environ.items() if k.startswith("GEMINI_API_KEY")]
+    if not api_keys:
+        raise ValueError("No GEMINI_API_KEY environment variables found.")
 
-    client = genai.Client(api_key=api_key)
+    client = genai.Client(api_key=api_keys[0])
     
     import time
     SAFE_LIMIT = 200000
@@ -106,11 +106,16 @@ def generate_answer(query: str, context_chunks: list[dict], chat_history: list[d
         
     models_to_try = [model_name] + fallback_models
     
-    max_retries_per_model = 2
+    import random
+    
+    shuffled_keys = list(api_keys)
+    random.shuffle(shuffled_keys)
+    
     last_error_str = ""
     
     for current_model in models_to_try:
-        for attempt in range(max_retries_per_model):
+        for current_key in shuffled_keys:
+            client = genai.Client(api_key=current_key)
             try:
                 response = client.models.generate_content(
                     model=current_model,
@@ -121,14 +126,12 @@ def generate_answer(query: str, context_chunks: list[dict], chat_history: list[d
                 error_str = str(e)
                 last_error_str = error_str
                 if "503" in error_str or "429" in error_str or "UNAVAILABLE" in error_str or "overloaded" in error_str.lower():
-                    if attempt < max_retries_per_model - 1:
-                        time.sleep(2 ** attempt)
-                        continue
-                    else:
-                        print(f"Model {current_model} quá tải, thử fallback model...")
-                        break # Chuyển sang model backup
+                    print(f"Key {current_key[:10]}... kẹt đạn (429/503), đổi súng...")
+                    time.sleep(1.5)
+                    continue
                 else:
                     raise HTTPException(status_code=502, detail=f"Lỗi từ Google AI (Model '{current_model}'): {error_str}")
+        print(f"Tất cả súng đều kẹt với {current_model}, chuyển sang model dự phòng...")
                     
-    raise HTTPException(status_code=502, detail=f"Tất cả các model (kể cả backup) đều quá tải. Lỗi: {last_error_str}")
+    raise HTTPException(status_code=502, detail=f"Tất cả các model và API keys đều quá tải. Lỗi cuối: {last_error_str}")
         

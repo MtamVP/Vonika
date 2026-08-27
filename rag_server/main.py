@@ -59,7 +59,13 @@ def chat(req: models.ChatRequest):
         answer, tokens = llm.generate_answer(req.query, [], chat_history, req.model)
         return {"answer": answer, "sources": [], "tokens": tokens}
     
-    top_chunks = retrieval.retrieve_top_chunks(req.query, all_chunks, top=req.top_k_chunks)
+    MAX_SMART_CHUNKS = 150
+    if len(all_chunks) <= MAX_SMART_CHUNKS:
+        top_chunks = sorted(all_chunks, key=lambda x: (x.get('file_id', 0), x.get('chunk_index', 0)))
+    else:
+        top_chunks = retrieval.retrieve_top_chunks(req.query, all_chunks, top=MAX_SMART_CHUNKS)
+        top_chunks = sorted(top_chunks, key=lambda x: (x.get('file_id', 0), x.get('chunk_index', 0)))
+        
     answer, tokens = llm.generate_answer(req.query, top_chunks, chat_history, req.model)
     
     source_file_ids = list(set([c["file_id"] for c in top_chunks]))

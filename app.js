@@ -49,7 +49,7 @@ function showToast(message, type = 'success') {
                 if (toast.parentElement) toast.remove();
             }, 350);
         }
-    }, 5000);
+    }, 2303);
 }
 
 // Global Error Handlers
@@ -225,7 +225,7 @@ function scrollToBottom() {
   }
 }
 
-function parseAndRenderAIMessage(messageEl, rawContent) {
+function parseAndRenderAIMessage(messageEl, rawContent, shouldStream = false) {
     let answer = rawContent;
     let suggestions = [];
     let sources = [];
@@ -248,16 +248,21 @@ function parseAndRenderAIMessage(messageEl, rawContent) {
         suggestions = sugText.split('\n').map(l => l.replace(/^\d+\.\s*/, '').trim()).filter(l => l);
     }
 
-    const parsedAnswer = window.marked ? marked.parse(answer) : answer;
     const contentContainer = messageEl.querySelector(".content");
-    contentContainer.innerHTML = `<div class="markdown-body">${parsedAnswer}</div>`;
+
+    const footerDiv = document.createElement("div");
+    footerDiv.className = "message-footer";
+    footerDiv.style.cssText = "display: flex; justify-content: space-between; align-items: flex-end; margin-top: 15px; padding-top: 12px; border-top: 1px dashed var(--border-color, #e2e8f0); gap: 16px;";
+
+    // Left: Sources
+    const sourcesDiv = document.createElement("div");
+    sourcesDiv.className = "sources";
+    sourcesDiv.style.flex = "1";
 
     const showSources = document.getElementById("show-sources-toggle")?.checked ?? true;
     if (showSources && sources?.length) {
-      let sourcesHtml = '<div class="sources" style="margin-top: 15px; padding-top: 12px; border-top: 1px dashed var(--border-color, #e2e8f0);">';
-      sourcesHtml += '<div style="font-size: 0.85rem; color: #64748b; margin-bottom: 10px; font-weight: 500;"> Nguồn tham khảo:</div>';
+      let sourcesHtml = '<div style="font-size: 0.85rem; color: #64748b; margin-bottom: 8px; font-weight: 500;"> Nguồn tham khảo:</div>';
       sourcesHtml += '<div style="display: flex; flex-wrap: wrap; gap: 8px;">';
-      
       sources.forEach(sourceName => {
         const fileObj = Array.from(corpusFiles.values()).find(f => f.file_name === sourceName);
         const href = fileObj ? fileObj.file_url : '#';
@@ -267,28 +272,41 @@ function parseAndRenderAIMessage(messageEl, rawContent) {
         sourcesHtml += `
           <a href="${href}" ${target} class="source-chip" title="${sourceName}" style="display: inline-flex; align-items: center; gap: 6px; padding: 6px 12px; background-color: rgba(59, 130, 246, 0.1); color: #3b82f6; border: 1px solid rgba(59, 130, 246, 0.2); border-radius: 20px; font-size: 0.8rem; text-decoration: none; transition: all 0.2s ease; font-weight: 500; max-width: 100%; box-sizing: border-box; ${cursor}" onmouseover="this.style.backgroundColor='rgba(59, 130, 246, 0.2)'" onmouseout="this.style.backgroundColor='rgba(59, 130, 246, 0.1)'">
             <i class="fa-regular fa-file-lines" style="flex-shrink: 0;"></i> 
-            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${sourceName}</span>
+            <span style="overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 250px;">${sourceName}</span>
           </a>
         `;
       });
-      sourcesHtml += '</div></div>';
-      
-      contentContainer.innerHTML += sourcesHtml;
+      sourcesHtml += '</div>';
+      sourcesDiv.innerHTML = sourcesHtml;
     }
-    
-    // Nút Export Markdown
-    const exportBtnContainer = document.createElement("div");
-    exportBtnContainer.style.marginTop = "10px";
-    exportBtnContainer.style.textAlign = "right";
-    
+
+    // Right: Action Buttons (Copy, Download)
+    const actionsDiv = document.createElement("div");
+    actionsDiv.className = "action-buttons";
+    actionsDiv.style.cssText = "display: flex; gap: 6px; align-items: center; flex-shrink: 0;";
+
+    // Copy Button
+    const copyBtn = document.createElement("button");
+    copyBtn.title = "Copy nội dung";
+    copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+    copyBtn.style.cssText = "background: none; border: 1px solid transparent; color: #94a3b8; cursor: pointer; font-size: 1rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: all 0.2s; opacity: 0.7;";
+    copyBtn.onmouseover = () => { copyBtn.style.opacity = "1"; copyBtn.style.background = "var(--color-bg-hover)"; copyBtn.style.borderColor = "var(--color-border)"; };
+    copyBtn.onmouseout = () => { copyBtn.style.opacity = "0.7"; copyBtn.style.background = "none"; copyBtn.style.borderColor = "transparent"; };
+    copyBtn.onclick = () => {
+        navigator.clipboard.writeText(answer).then(() => {
+            copyBtn.innerHTML = '<i class="fa-solid fa-check" style="color: #10b981;"></i>';
+            setTimeout(() => { copyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>'; }, 2000);
+        });
+        showToast("Đã sao chép nội dung", "success");
+    };
+
+    // Download Button
     const exportBtn = document.createElement("button");
-    exportBtn.className = "export-md-btn";
-    exportBtn.title = "Tải câu trả lời này (Markdown)";
-    exportBtn.innerHTML = '<i class="fa-solid fa-download"></i> Tải câu trả lời này';
-    exportBtn.style.cssText = "background: none; border: none; color: #64748b; cursor: pointer; font-size: 0.85rem; padding: 5px 10px; border-radius: 5px; transition: background 0.2s;";
-    exportBtn.onmouseover = () => exportBtn.style.background = "#f1f5f9";
-    exportBtn.onmouseout = () => exportBtn.style.background = "none";
-    
+    exportBtn.title = "Tải Markdown";
+    exportBtn.innerHTML = '<i class="fa-solid fa-download"></i>';
+    exportBtn.style.cssText = "background: none; border: 1px solid transparent; color: #94a3b8; cursor: pointer; font-size: 1rem; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; border-radius: 6px; transition: all 0.2s; opacity: 0.7;";
+    exportBtn.onmouseover = () => { exportBtn.style.opacity = "1"; exportBtn.style.background = "var(--color-bg-hover)"; exportBtn.style.borderColor = "var(--color-border)"; };
+    exportBtn.onmouseout = () => { exportBtn.style.opacity = "0.7"; exportBtn.style.background = "none"; exportBtn.style.borderColor = "transparent"; };
     exportBtn.onclick = () => {
         const prevEl = messageEl.previousElementSibling;
         let userQuestion = "Không xác định";
@@ -307,7 +325,7 @@ function parseAndRenderAIMessage(messageEl, rawContent) {
         const a = document.createElement("a");
         a.href = url;
         const safeName = userQuestion
-            .replace(/[\\/:*?"<>|]/g, '') // Xóa các ký tự cấm trong tên file
+            .replace(/[\\/:*?"<>|]/g, '')
             .trim()
             .split(/\s+/)
             .slice(0, 7)
@@ -318,11 +336,16 @@ function parseAndRenderAIMessage(messageEl, rawContent) {
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
     };
-    exportBtnContainer.appendChild(exportBtn);
-    contentContainer.appendChild(exportBtnContainer);
+
+    actionsDiv.appendChild(copyBtn);
+    actionsDiv.appendChild(exportBtn);
+
+    footerDiv.appendChild(sourcesDiv);
+    footerDiv.appendChild(actionsDiv);
     
+    let suggestionsDiv = null;
     if (suggestions.length > 0) {
-      const suggestionsDiv = document.createElement("div");
+      suggestionsDiv = document.createElement("div");
       suggestionsDiv.className = "suggestions-container";
       suggestions.forEach(s => {
         const btn = document.createElement("button");
@@ -334,7 +357,34 @@ function parseAndRenderAIMessage(messageEl, rawContent) {
         };
         suggestionsDiv.appendChild(btn);
       });
-      messageEl.appendChild(suggestionsDiv);
+    }
+
+    if (shouldStream) {
+        contentContainer.innerHTML = `<div class="markdown-body"></div>`;
+        const mdBody = contentContainer.querySelector('.markdown-body');
+        const charsPerSecond = 1600;
+        const startTime = performance.now();
+
+        function tick(now) {
+            const elapsed = now - startTime;
+            const currentIndex = Math.min(answer.length, Math.floor(elapsed / 1000 * charsPerSecond));
+            const currentText = answer.substring(0, currentIndex);
+            mdBody.innerHTML = (window.marked ? marked.parse(currentText) : currentText) +
+                (currentIndex < answer.length ? '<span class="rag-typing-cursor"></span>' : '');
+            scrollToBottom();
+            if (currentIndex < answer.length) {
+                requestAnimationFrame(tick);
+            } else {
+                contentContainer.appendChild(footerDiv);
+                if (suggestionsDiv) messageEl.appendChild(suggestionsDiv);
+            }
+        }
+        requestAnimationFrame(tick);
+    } else {
+        const parsedAnswer = window.marked ? marked.parse(answer) : answer;
+        contentContainer.innerHTML = `<div class="markdown-body">${parsedAnswer}</div>`;
+        contentContainer.appendChild(footerDiv);
+        if (suggestionsDiv) messageEl.appendChild(suggestionsDiv);
     }
 }
 
@@ -420,7 +470,7 @@ async function sendMessages(text) {
     let { answer, sources, tokens } = await fetchAIResponse(text, fileIds, currentChatId);
 
     if (tokens) {
-      showToast(`Báo cáo API: Prompt này đã tiêu tốn ${tokens.toLocaleString()} tokens.`, 'success');
+      showToast(`Đã sử dụng ${tokens.toLocaleString()} tokens`, 'success');
     }
 
     let contentToSave = answer;
@@ -428,7 +478,7 @@ async function sendMessages(text) {
         contentToSave += "\n\n---SOURCES---\n" + JSON.stringify(sources);
     }
 
-    parseAndRenderAIMessage(loadingEl, contentToSave);
+    parseAndRenderAIMessage(loadingEl, contentToSave, true);
     
     scrollToBottom();
 
@@ -642,7 +692,7 @@ if (triggerReportBtn) {
             });
 
             if (response.ok) {
-                showToast("Đã kích hoạt thành công! Báo cáo đang được tạo trên GitHub.", "success");
+                showToast("Báo cáo đang được tạo trên GitHub.", "success");
             } else {
                 const errorData = await response.json().catch(() => ({}));
                 const errorMsg = errorData.detail || response.statusText;
@@ -1398,7 +1448,6 @@ if (searchBtn && searchInput) {
 // Fetch API backend-RAG server
 
 async function fetchAIResponse(question, fileIds = [], currentChatId) {
-  const top_k = parseInt(document.getElementById("top-k-select")?.value || 5, 10);
   const model = document.getElementById("model-select")?.value || "gemini-2.5-flash";
   const res = await fetch(`${backend_url}/chat`, {
     method: "POST",
@@ -1409,7 +1458,6 @@ async function fetchAIResponse(question, fileIds = [], currentChatId) {
       query: question,
       file_ids: fileIds.map(id => parseInt(id, 10)),
       chatId: currentChatId,
-      top_k_chunks: top_k,
       model: model
     }),
   });
@@ -1431,19 +1479,12 @@ async function initApp() {
   
   // Save settings
   const modelSelect = document.getElementById("model-select");
-  const topKSelect = document.getElementById("top-k-select");
   const showSourcesToggle = document.getElementById("show-sources-toggle");
 
   if (modelSelect) {
     const savedModel = localStorage.getItem("rag_model");
     if (savedModel) modelSelect.value = savedModel;
     modelSelect.addEventListener("change", () => localStorage.setItem("rag_model", modelSelect.value));
-  }
-
-  if (topKSelect) {
-    const savedTopK = localStorage.getItem("rag_top_k");
-    if (savedTopK) topKSelect.value = savedTopK;
-    topKSelect.addEventListener("change", () => localStorage.setItem("rag_top_k", topKSelect.value));
   }
 
   if (showSourcesToggle) {
