@@ -2,8 +2,10 @@ name: Daily Market Report
 
 on:
   schedule:
-    # 12:30 UTC tương đương 19:30 tối giờ Việt Nam (UTC+7), chạy từ Thứ 2 đến Thứ 6 (1-5)
-    - cron: '30 12 * * 1-5'
+    # Chạy nhiều khung giờ từ 19h30 đến 23h30 (giờ VN) để backup, dùng phút lẻ để tránh Github queue delay
+    - cron: '37 12 * * 1-5' # ~ 19:37 VN
+    - cron: '14 14 * * 1-5' # ~ 21:14 VN
+    - cron: '41 15 * * 1-5' # ~ 22:41 VN
   workflow_dispatch: # Cho phép chạy bằng tay trên web
 
 jobs:

@@ -357,8 +357,14 @@ if __name__ == "__main__":
         sys.exit(0)
 
     # Tự động chạy các script cập nhật dữ liệu mới nhất
+    res_download = subprocess.run([sys.executable, "download_report.py"], cwd="masvn_report")
+    if res_download.returncode == 2:
+        print(f"Trang nguồn chưa cập nhật báo cáo hôm nay. Dừng sớm để tiết kiệm tài nguyên.")
+        sys.exit(0)
+    elif res_download.returncode != 0:
+        sys.exit(1)
+
     try:
-        subprocess.run([sys.executable, "download_report.py"], cwd="masvn_report", check=True)
         subprocess.run([sys.executable, "parserReport.py"], cwd="masvn_report", check=True)
         subprocess.run([sys.executable, "extract_vietstock.py"], cwd="vietstock", check=True)
     except subprocess.CalledProcessError as e:

@@ -66,8 +66,15 @@ def download_pdf(url, output_path):
         print(f"Download error: {e}")
 
 if __name__ == "__main__":
+    import sys
+    from datetime import datetime
     latest_url, filename = get_latest_report_link()
     if latest_url:
+        today_ddmm = datetime.now().strftime('%d%m')
+        if filename != f"report_{today_ddmm}.pdf":
+            print(f"Latest report on web is {filename}, but today is report_{today_ddmm}.pdf. Skipping.")
+            sys.exit(2)
+            
         output_file = os.path.join(OUTPUT_DIR, filename)
         
         # Xóa các file báo cáo cũ trước khi tải file mới
