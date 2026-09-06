@@ -95,7 +95,9 @@ def generate_answer(query: str, context_chunks: list[dict], chat_history: list[d
         print(f"Vượt token an toàn, đang tự động giảm bớt context_chunks. Hiện còn {len(context_chunks)} chunks.")
     
     fallback_models = []
-    if "3.7" in model_name:
+    if "3.8" in model_name:
+        fallback_models = [model_name.replace("3.8", "3.7"), model_name.replace("3.8", "3.6"), model_name.replace("3.8", "3.5"), model_name.replace("3.8", "2.5")]
+    elif "3.7" in model_name:
         fallback_models = [model_name.replace("3.7", "3.6"), model_name.replace("3.7", "3.5"), model_name.replace("3.7", "2.5")]
     elif "3.6" in model_name:
         fallback_models = [model_name.replace("3.6", "3.5"), model_name.replace("3.6", "2.5")]
@@ -126,12 +128,12 @@ def generate_answer(query: str, context_chunks: list[dict], chat_history: list[d
                 error_str = str(e)
                 last_error_str = error_str
                 if "503" in error_str or "429" in error_str or "UNAVAILABLE" in error_str or "overloaded" in error_str.lower():
-                    print(f"Key {current_key[:10]}... kẹt đạn (429/503), đổi súng...")
+                    print(f"Key {current_key[:10]}... không sử dụng được (429/503), đổi api key...")
                     time.sleep(1.5)
                     continue
                 else:
                     raise HTTPException(status_code=502, detail=f"Lỗi từ Google AI (Model '{current_model}'): {error_str}")
-        print(f"Tất cả súng đều kẹt với {current_model}, chuyển sang model dự phòng...")
+        print(f"Tất cả api key đều không sử dụng được với {current_model}, chuyển sang model dự phòng...")
                     
-    raise HTTPException(status_code=502, detail=f"Tất cả các model và API keys đều quá tải. Lỗi cuối: {last_error_str}")
+    raise HTTPException(status_code=502, detail=f"Tất cả các model và API keys đều không sử dụng được. Lỗi cuối: {last_error_str}")
         
