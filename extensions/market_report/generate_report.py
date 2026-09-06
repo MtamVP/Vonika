@@ -327,7 +327,7 @@ def upload_market_report_to_supabase(pdf_path):
                     f"{backend_url}/process-file",
                     headers={"Content-Type": "application/json"},
                     json={"file_id": file_id},
-                    timeout=30
+                    timeout=120
                 )
                 if process_res.ok:
                     print("Successfully processed market report file for RAG.")

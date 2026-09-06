@@ -43,9 +43,6 @@ def process_file(req: models.ProcessFileRequest):
                 for j, chunk in enumerate(batch)
             ]
             supabase_client.supabase.table("documents").insert(rows).execute()
-            
-            for chunk in chunks:
-                retrieval.get_cache_tokens(chunk)
     
     return {"status": "ok", "chunks": len(chunks)}
 
