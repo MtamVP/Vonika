@@ -9,7 +9,12 @@ async def run():
         browser = await p.chromium.launch(headless=True)
         page = await browser.new_page()
         
-        await page.goto("https://finance.vietstock.vn/", wait_until="domcontentloaded", timeout=30000)
+        try:
+            await page.goto("https://finance.vietstock.vn/", wait_until="domcontentloaded", timeout=60000)
+        except Exception as e:
+            print(f"First attempt to load page failed: {e}. Retrying in 5s...")
+            await asyncio.sleep(5)
+            await page.goto("https://finance.vietstock.vn/", wait_until="domcontentloaded", timeout=60000)
         
         # 1. Wait for JS charts to fully render
         await asyncio.sleep(5)
