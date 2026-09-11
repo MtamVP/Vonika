@@ -30,17 +30,32 @@ def get_target_files(rollup_type):
     Tìm kiếm các file PDF sẽ được tổng hợp dựa vào rollup_type bằng cách truy vấn Supabase.
     Sau đó tải về máy tính cục bộ để xử lý.
     """
-    prefix = ""
+    now = datetime.now()
+    prefix = None
+    expected_filenames = []
+    
     if rollup_type == "weekly":
         prefix = "Báo cáo thị trường ngày"
     elif rollup_type == "monthly":
         prefix = "Báo cáo Tuần"
-    elif rollup_type in ["quarterly", "halfyear", "yearly"]:
-        # Quý thì gộp Tháng, Nửa năm/Năm thì gộp Quý
-        if rollup_type == "quarterly":
-            prefix = "Báo cáo Tháng"
+    elif rollup_type == "quarterly":
+        year = now.year if now.month > 1 else now.year - 1
+        q = 1 if now.month == 4 else (2 if now.month == 7 else (3 if now.month == 10 else 4))
+        if q == 1: months = [1, 2, 3]
+        elif q == 2: months = [4, 5, 6]
+        elif q == 3: months = [7, 8, 9]
+        else: months = [10, 11, 12]
+        expected_filenames = [f"Báo cáo Tháng {m} năm {year}.pdf" for m in months]
+    elif rollup_type == "halfyear":
+        year = now.year if now.month > 1 else now.year - 1
+        h = 1 if now.month == 7 else 2
+        if h == 1:
+            expected_filenames = [f"Báo cáo Quý 1 năm {year}.pdf", f"Báo cáo Quý 2 năm {year}.pdf"]
         else:
-            prefix = "Báo cáo Quý"
+            expected_filenames = [f"Báo cáo Quý 3 năm {year}.pdf", f"Báo cáo Quý 4 năm {year}.pdf"]
+    elif rollup_type == "yearly":
+        year = now.year - 1
+        expected_filenames = [f"Báo cáo Quý {q} năm {year}.pdf" for q in [1, 2, 3, 4]]
             
     headers = {
         "apikey": SUPABASE_KEY,
@@ -54,7 +69,10 @@ def get_target_files(rollup_type):
     if resp.ok:
         data = resp.json()
         for item in data:
-            if item['file_name'].startswith(prefix) and item['file_name'].endswith(".pdf"):
+            fname = item['file_name']
+            if prefix and fname.startswith(prefix) and fname.endswith(".pdf"):
+                files.append(item)
+            elif expected_filenames and fname in expected_filenames:
                 files.append(item)
     
     # Sắp xếp theo tên file (theo ngày tháng)
