@@ -11,10 +11,10 @@ from datetime import datetime
 from google import genai
 from playwright.async_api import async_playwright
 from dotenv import load_dotenv
+from dotenv import load_dotenv
 import glob
 import requests
-
-# Load .env file from rag_server directory
+import urllib.parse
 env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "rag_server", ".env")
 load_dotenv(env_path)
 
@@ -359,7 +359,7 @@ if __name__ == "__main__":
         "Authorization": f"Bearer {supabase_key}"
     }
     
-    query_url = f"{supabase_url}/rest/v1/uploaded_files?file_name=eq.{requests.utils.quote(expected_file_name)}&select=id"
+    query_url = f"{supabase_url}/rest/v1/uploaded_files?file_name=eq.{urllib.parse.quote(expected_file_name)}&select=id"
     try:
         resp = requests.get(query_url, headers=headers)
         if resp.ok and len(resp.json()) > 0:

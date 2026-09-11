@@ -12,6 +12,7 @@ from google import genai
 from playwright.async_api import async_playwright
 import requests
 import subprocess
+import urllib.parse
 from dotenv import load_dotenv
 
 # Load .env
@@ -84,7 +85,7 @@ def get_target_files(rollup_type):
         file_url = item['file_url']
         print(f"Downloading {file_name} from Supabase...")
         try:
-            r = requests.get(file_url)
+            r = requests.get(file_url, headers=headers)
             if r.ok:
                 local_path = os.path.join(OUTPUT_DIR, file_name)
                 with open(local_path, 'wb') as f:
@@ -317,7 +318,7 @@ def delete_source_files(pdf_paths):
         file_name = os.path.basename(path)
         print(f"Deleting {file_name} from Supabase...")
         
-        query_url = f"{SUPABASE_URL}/rest/v1/uploaded_files?file_name=eq.{requests.utils.quote(file_name)}&select=id,file_url"
+        query_url = f"{SUPABASE_URL}/rest/v1/uploaded_files?file_name=eq.{urllib.parse.quote(file_name)}&select=id,file_url"
         resp = requests.get(query_url, headers=headers)
         if resp.ok and len(resp.json()) > 0:
             file_data = resp.json()[0]
@@ -352,7 +353,7 @@ def main():
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}"
     }
-    query_url = f"{SUPABASE_URL}/rest/v1/uploaded_files?file_name=eq.{requests.utils.quote(expected_file_name)}&select=id"
+    query_url = f"{SUPABASE_URL}/rest/v1/uploaded_files?file_name=eq.{urllib.parse.quote(expected_file_name)}&select=id"
     try:
         resp = requests.get(query_url, headers=headers)
         if resp.ok and len(resp.json()) > 0:
