@@ -42,8 +42,8 @@ jobs:
         working-directory: ./extensions/market_report
         run: |
           if [ -f "NEW_REPORT_GENERATED" ]; then
-            # Tìm file PDF báo cáo vừa được tạo
-            PDF_FILE=$(ls "Báo cáo thị trường ngày"*.pdf | head -n 1)
+            # Đọc tên file PDF báo cáo vừa được tạo
+            PDF_FILE=$(cat NEW_REPORT_GENERATED)
             
             if [ -n "$PDF_FILE" ]; then
               echo "Sending $PDF_FILE to Discord..."

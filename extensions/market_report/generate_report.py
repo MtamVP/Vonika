@@ -408,5 +408,5 @@ if __name__ == "__main__":
         upload_market_report_to_supabase(out_path)
         
         # Đánh dấu đã tạo file thành công trong phiên chạy này
-        with open("NEW_REPORT_GENERATED", "w") as f:
-            f.write("OK")
+        with open("NEW_REPORT_GENERATED", "w", encoding='utf-8') as f:
+            f.write(out_path)
