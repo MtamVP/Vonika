@@ -104,12 +104,4 @@ jobs:
             echo "Không có file báo cáo MỚI nào được tạo trong lần chạy này. Bỏ qua bước gửi Discord."
           fi
 
-      - name: Commit and Push changes
-        if: env.ROLLUP_TYPE != 'none'
-        working-directory: ./extensions/market_report
-        run: |
-          git config --global user.name "GitHub Action Rollup"
-          git config --global user.email "action@github.com"
-          git add "*.pdf"
-          git commit -m "Auto-generated ${{ env.ROLLUP_TYPE }} rollup report" || echo "No changes to commit"
-          git push
+

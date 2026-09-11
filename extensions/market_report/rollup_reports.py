@@ -27,9 +27,9 @@ BACKEND_URL = "https://vonika-git-863156331978.europe-west1.run.app/api"
 
 def get_target_files(rollup_type):
     """
-    Tìm kiếm các file PDF sẽ được tổng hợp dựa vào rollup_type.
+    Tìm kiếm các file PDF sẽ được tổng hợp dựa vào rollup_type bằng cách truy vấn Supabase.
+    Sau đó tải về máy tính cục bộ để xử lý.
     """
-    files = []
     prefix = ""
     if rollup_type == "weekly":
         prefix = "Báo cáo thị trường ngày"
@@ -42,9 +42,42 @@ def get_target_files(rollup_type):
         else:
             prefix = "Báo cáo Quý"
             
-    all_pdfs = glob.glob(os.path.join(OUTPUT_DIR, f"{prefix} *.pdf"))
-    all_pdfs.sort()
-    return all_pdfs
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}"
+    }
+    
+    query_url = f"{SUPABASE_URL}/rest/v1/uploaded_files?category=eq.market_reports&select=file_name,file_url"
+    resp = requests.get(query_url, headers=headers)
+    
+    files = []
+    if resp.ok:
+        data = resp.json()
+        for item in data:
+            if item['file_name'].startswith(prefix) and item['file_name'].endswith(".pdf"):
+                files.append(item)
+    
+    # Sắp xếp theo tên file (theo ngày tháng)
+    files.sort(key=lambda x: x['file_name'])
+    
+    downloaded_paths = []
+    for item in files:
+        file_name = item['file_name']
+        file_url = item['file_url']
+        print(f"Downloading {file_name} from Supabase...")
+        try:
+            r = requests.get(file_url)
+            if r.ok:
+                local_path = os.path.join(OUTPUT_DIR, file_name)
+                with open(local_path, 'wb') as f:
+                    f.write(r.content)
+                downloaded_paths.append(local_path)
+            else:
+                print(f"Failed to download {file_name}")
+        except Exception as e:
+            print(f"Error downloading {file_name}: {e}")
+            
+    return downloaded_paths
 
 def extract_text_from_pdfs(pdf_paths):
     combined_text = ""
@@ -227,19 +260,34 @@ def upload_market_report_to_supabase(pdf_path):
         db_data = db_res.json()
         file_id = db_data[0]['id']
         
-        process_res = requests.post(
-            f"{BACKEND_URL}/process-file",
-            headers={"Content-Type": "application/json"},
-            json={"file_id": file_id}
-        )
-        if not process_res.ok:
-            print("Failed to process file on backend:", process_res.text)
+        print(f"Processing file {file_id} via RAG backend...")
+        import time
+        max_retries = 3
+        for attempt in range(max_retries):
+            try:
+                process_res = requests.post(
+                    f"{BACKEND_URL}/process-file",
+                    headers={"Content-Type": "application/json"},
+                    json={"file_id": file_id},
+                    timeout=120
+                )
+                if process_res.ok:
+                    print("Successfully processed market report file for RAG.")
+                    break
+                else:
+                    print(f"Failed to process file on backend (Attempt {attempt+1}):", process_res.text)
+                    if attempt < max_retries - 1:
+                        time.sleep(10 * (attempt + 1))
+            except Exception as e:
+                print(f"Error calling backend (Attempt {attempt+1}): {e}")
+                if attempt < max_retries - 1:
+                    time.sleep(10 * (attempt + 1))
     except Exception as e:
-        print("Error uploading to Supabase:", str(e))
+        print("Error uploading/processing to Supabase:", str(e))
 
 def delete_source_files(pdf_paths):
     """
-    Xóa file từ Git và gọi Supabase API xóa file từ Storage và uploaded_files.
+    Gọi Supabase API xóa file từ Storage và uploaded_files.
     """
     headers = {
         "apikey": SUPABASE_KEY,
@@ -249,7 +297,7 @@ def delete_source_files(pdf_paths):
 
     for path in pdf_paths:
         file_name = os.path.basename(path)
-        print(f"Deleting {file_name}...")
+        print(f"Deleting {file_name} from Supabase...")
         
         query_url = f"{SUPABASE_URL}/rest/v1/uploaded_files?file_name=eq.{requests.utils.quote(file_name)}&select=id,file_url"
         resp = requests.get(query_url, headers=headers)
@@ -271,15 +319,6 @@ def delete_source_files(pdf_paths):
                     f"{SUPABASE_URL}/storage/v1/object/chat-files/{storage_path}", 
                     headers=headers
                 )
-                
-        try:
-            subprocess.run(["git", "rm", path], check=True, stdout=subprocess.DEVNULL)
-            print(f"Removed {path} from git.")
-        except subprocess.CalledProcessError:
-            # Nếu git rm thất bại (ví dụ file chưa được commit), ta xóa bằng os.remove
-            if os.path.exists(path):
-                os.remove(path)
-                print(f"Deleted local file {path}.")
 
 def main():
     parser = argparse.ArgumentParser(description="Rolling Report Generator")
@@ -287,6 +326,23 @@ def main():
     args = parser.parse_args()
     
     rollup_type = args.type
+    title = get_rollup_title(rollup_type)
+    expected_file_name = f"{title}.pdf"
+
+    # Idempotency check: Kiểm tra xem báo cáo tổng hợp này đã tồn tại trên Supabase chưa
+    headers = {
+        "apikey": SUPABASE_KEY,
+        "Authorization": f"Bearer {SUPABASE_KEY}"
+    }
+    query_url = f"{SUPABASE_URL}/rest/v1/uploaded_files?file_name=eq.{requests.utils.quote(expected_file_name)}&select=id"
+    try:
+        resp = requests.get(query_url, headers=headers)
+        if resp.ok and len(resp.json()) > 0:
+            print(f"Báo cáo '{expected_file_name}' đã tồn tại trên Supabase. Bỏ qua để tránh chạy trùng lặp.")
+            return
+    except Exception as e:
+        print(f"Lỗi khi kiểm tra file trên Supabase: {e}")
+        
     target_files = get_target_files(rollup_type)
     
     if not target_files:
@@ -311,6 +367,11 @@ def main():
     
     if rollup_type in ["weekly", "monthly"]:
         delete_source_files(target_files)
+        
+    # Xóa các file PDF nguồn đã tải về tạm thời
+    for path in target_files:
+        if os.path.exists(path):
+            os.remove(path)
         
     with open("NEW_REPORT_FILENAME.txt", "w", encoding='utf-8') as f:
         f.write(out_pdf)

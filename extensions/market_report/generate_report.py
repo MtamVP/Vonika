@@ -350,11 +350,23 @@ if __name__ == "__main__":
     # 1. Cơ chế Tự thoát (Idempotency) - Kiểm tra file của ngày hôm nay đã tồn tại chưa
     today_date = datetime.now().strftime('%d/%m/%Y')
     today_file_date = today_date.replace('/', '-')
-    expected_pdf = os.path.join(OUTPUT_DIR, f"Báo cáo thị trường ngày {today_file_date}.pdf")
+    expected_file_name = f"Báo cáo thị trường ngày {today_file_date}.pdf"
     
-    if os.path.exists(expected_pdf):
-        print(f"File '{expected_pdf}' đã tồn tại. Bỏ qua chạy để tránh trùng lặp.")
-        sys.exit(0)
+    supabase_url = "https://jqzlmzbvaesczarqptye.supabase.co"
+    supabase_key = "sb_publishable_wXUovp36dvd_VwdX-U8ecg_P-OrGwEb"
+    headers = {
+        "apikey": supabase_key,
+        "Authorization": f"Bearer {supabase_key}"
+    }
+    
+    query_url = f"{supabase_url}/rest/v1/uploaded_files?file_name=eq.{requests.utils.quote(expected_file_name)}&select=id"
+    try:
+        resp = requests.get(query_url, headers=headers)
+        if resp.ok and len(resp.json()) > 0:
+            print(f"File '{expected_file_name}' đã tồn tại trên Supabase. Bỏ qua chạy để tránh trùng lặp.")
+            sys.exit(0)
+    except Exception as e:
+        print(f"Lỗi khi kiểm tra file trên Supabase: {e}")
 
     # Tự động chạy các script cập nhật dữ liệu mới nhất
     res_download = subprocess.run([sys.executable, "download_report.py"], cwd="masvn_report")
@@ -398,16 +410,3 @@ if __name__ == "__main__":
         # Đánh dấu đã tạo file thành công trong phiên chạy này
         with open("NEW_REPORT_GENERATED", "w") as f:
             f.write("OK")
-
-    for old_report in glob.glob(os.path.join(OUTPUT_DIR, "Báo cáo thị trường ngày *.pdf")):
-        # We need to make sure out_path is also absolute when comparing
-        if os.path.abspath(old_report) != os.path.abspath(os.path.join(OUTPUT_DIR, out_path)):
-            try:
-                subprocess.run(["git", "rm", old_report], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                print(f"Removed {old_report} from git.")
-            except Exception:
-                try:
-                    os.remove(old_report)
-                    print(f"Deleted local file {old_report}.")
-                except OSError:
-                    pass
