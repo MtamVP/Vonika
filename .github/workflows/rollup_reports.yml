@@ -2,16 +2,16 @@ name: Rolling Report Aggregation
 
 on:
   schedule:
-    # 02:00 UTC Thứ 7 hàng tuần -> Báo cáo Tuần
-    - cron: '0 2 * * 6'
-    # 03:00 UTC Mùng 1 hàng tháng -> Báo cáo Tháng
-    - cron: '0 3 1 * *'
-    # 04:00 UTC Mùng 1 các tháng 1,4,7,10 -> Báo cáo Quý
-    - cron: '0 4 1 1,4,7,10 *'
-    # 05:00 UTC Mùng 1 các tháng 1,7 -> Báo cáo Nửa năm
-    - cron: '0 5 1 1,7 *'
-    # 06:00 UTC Mùng 1 tháng 1 -> Báo cáo Năm
-    - cron: '0 6 1 1 *'
+    # 02:15 UTC Thứ 7 hàng tuần -> Báo cáo Tuần
+    - cron: '15 2 * * 6'
+    # 03:15 UTC Mùng 1 hàng tháng -> Báo cáo Tháng
+    - cron: '15 3 1 * *'
+    # 04:15 UTC Mùng 1 các tháng 1,4,7,10 -> Báo cáo Quý
+    - cron: '15 4 1 1,4,7,10 *'
+    # 05:15 UTC Mùng 1 các tháng 1,7 -> Báo cáo Nửa năm
+    - cron: '15 5 1 1,7 *'
+    # 06:15 UTC Mùng 1 tháng 1 -> Báo cáo Năm
+    - cron: '15 6 1 1 *'
   workflow_dispatch:
     inputs:
       rollup_type:
@@ -51,23 +51,25 @@ jobs:
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "ROLLUP_TYPE=${{ github.event.inputs.rollup_type }}" >> $GITHUB_ENV
           else
-            # Extract cron schedule that triggered this run
-            # GitHub actions doesn't natively expose the specific cron that triggered it if multiple exist, 
-            # so we infer by time/day (approximate UTC time when triggered).
-            CURRENT_DAY_OF_WEEK=$(date +%u)
-            CURRENT_DAY=$(date +%d)
-            CURRENT_MONTH=$(date +%m)
-            CURRENT_HOUR=$(date +%H)
+            # Sử dụng github.event.schedule để lấy chính xác cron đã trigger workflow
+            SCHEDULE_EVENT="${{ github.event.schedule }}"
             
-            # Mặc định (phòng trường hợp lỗi)
             ROLLUP_TYPE="none"
             
-            # Logic kiểm tra dựa trên giờ chạy (02:00 -> 06:00 UTC)
-            if [ "$CURRENT_HOUR" = "02" ]; then ROLLUP_TYPE="weekly"
-            elif [ "$CURRENT_HOUR" = "03" ]; then ROLLUP_TYPE="monthly"
-            elif [ "$CURRENT_HOUR" = "04" ]; then ROLLUP_TYPE="quarterly"
-            elif [ "$CURRENT_HOUR" = "05" ]; then ROLLUP_TYPE="halfyear"
-            elif [ "$CURRENT_HOUR" = "06" ]; then ROLLUP_TYPE="yearly"
+            # Kiểm tra dựa trên cron expression
+            if [ "$SCHEDULE_EVENT" = "0 2 * * 6" ] || [ "$SCHEDULE_EVENT" = "15 2 * * 6" ]; then ROLLUP_TYPE="weekly"
+            elif [ "$SCHEDULE_EVENT" = "0 3 1 * *" ] || [ "$SCHEDULE_EVENT" = "15 3 1 * *" ]; then ROLLUP_TYPE="monthly"
+            elif [ "$SCHEDULE_EVENT" = "0 4 1 1,4,7,10 *" ] || [ "$SCHEDULE_EVENT" = "15 4 1 1,4,7,10 *" ]; then ROLLUP_TYPE="quarterly"
+            elif [ "$SCHEDULE_EVENT" = "0 5 1 1,7 *" ] || [ "$SCHEDULE_EVENT" = "15 5 1 1,7 *" ]; then ROLLUP_TYPE="halfyear"
+            elif [ "$SCHEDULE_EVENT" = "0 6 1 1 *" ] || [ "$SCHEDULE_EVENT" = "15 6 1 1 *" ]; then ROLLUP_TYPE="yearly"
+            else
+              # Fallback logic nếu có lỗi (dựa vào thứ/ngày)
+              CURRENT_DAY_OF_WEEK=$(date +%u)
+              CURRENT_DAY=$(date +%d)
+              
+              if [ "$CURRENT_DAY_OF_WEEK" = "6" ]; then ROLLUP_TYPE="weekly"
+              elif [ "$CURRENT_DAY" = "01" ]; then ROLLUP_TYPE="monthly" # Fallback tạm thời
+              fi
             fi
             
             echo "ROLLUP_TYPE=$ROLLUP_TYPE" >> $GITHUB_ENV
@@ -104,4 +106,4 @@ jobs:
             echo "Không có file báo cáo MỚI nào được tạo trong lần chạy này. Bỏ qua bước gửi Discord."
           fi
 
-
+          
