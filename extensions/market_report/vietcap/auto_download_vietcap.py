@@ -70,7 +70,10 @@ def download_vietcap_report(email, password):
                 downloaded = True
                 break
             except Exception as e:
-                print(f"Không tìm thấy file ở ngày {yyyymmdd}. Đang thử ngày trước đó...")
+                try:
+                    print(f"Không tìm thấy file ở ngày {yyyymmdd}. Đang thử ngày trước đó...")
+                except UnicodeEncodeError:
+                    print(f"Khong tim thay file o ngay {yyyymmdd}. Dang thu ngay truoc do...")
                 
         browser.close()
         return downloaded

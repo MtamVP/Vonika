@@ -318,6 +318,15 @@ async def build_report_pdf(text_json, data_json, vietstock_csv, vietcap_json, ou
         right_html = markdown.markdown(md_text, extensions=['tables'])
         right_html = inject_charts_to_html(right_html, chart1, chart1b, chart2)
         
+        split_marker = '<div class="mas-section-header">THÔNG TIN CẬP NHẬT</div>'
+        if split_marker in right_html:
+            parts = right_html.split(split_marker, 1)
+            right_top_html = parts[0]
+            full_bottom_html = split_marker + parts[1]
+        else:
+            right_top_html = right_html
+            full_bottom_html = ""
+            
         full_html = f"""
         <!DOCTYPE html>
         <html>
@@ -419,12 +428,12 @@ async def build_report_pdf(text_json, data_json, vietstock_csv, vietcap_json, ou
                     text-transform: uppercase;
                     border-left: 4px solid #003366;
                 }}
-                .col-right p {{
+                .col-right p, .col-full p {{
                     font-size: 13px;
                     text-align: justify;
                     margin-bottom: 12px;
                 }}
-                .col-right h3 {{
+                .col-right h3, .col-full h3 {{
                     color: #003366;
                     font-size: 16px;
                     border-left: 3px solid #e67e22;
@@ -432,38 +441,43 @@ async def build_report_pdf(text_json, data_json, vietstock_csv, vietcap_json, ou
                     margin-top: 25px;
                     margin-bottom: 12px;
                 }}
-                .col-right h4, .col-right h5 {{
+                .col-right h4, .col-right h5, .col-full h4, .col-full h5 {{
                     color: #d35400;
                     font-size: 14px;
                     margin-top: 15px;
                     margin-bottom: 8px;
                 }}
-                .col-right table {{
+                .col-right table, .col-full table {{
                     width: 100%;
                     border-collapse: collapse;
                     margin: 20px 0;
                     font-size: 11px;
                     color: #333;
                 }}
-                .col-right th, .col-right td {{
+                .col-right th, .col-right td, .col-full th, .col-full td {{
                     border: none;
                     border-bottom: 1px solid #e0e0e0;
                     padding: 8px 6px;
                     text-align: right;
                 }}
-                .col-right th {{
+                .col-right th, .col-full th {{
                     background-color: #f0f4f8;
                     color: #003366;
                     text-align: center;
                     font-weight: bold;
                     border-bottom: 2px solid #003366;
                 }}
-                .col-right tr:nth-child(even) {{
+                .col-right tr:nth-child(even), .col-full tr:nth-child(even) {{
                     background-color: #f8f9fa;
                 }}
-                .col-right td:first-child, .col-right th:first-child {{
+                .col-right td:first-child, .col-right th:first-child, .col-full td:first-child, .col-full th:first-child {{
                     text-align: left;
                     font-weight: 500;
+                }}
+                .col-full {{
+                    width: 100%;
+                    clear: both;
+                    margin-top: 30px;
                 }}
                 .footer {{ 
                     text-align: center; 
@@ -485,8 +499,12 @@ async def build_report_pdf(text_json, data_json, vietstock_csv, vietcap_json, ou
                 </div>
                 <div class="col-right">
                     <div class="mas-title">Bản tin cuối ngày</div>
-                    {right_html}
+                    {right_top_html}
                 </div>
+            </div>
+            
+            <div class="col-full">
+                {full_bottom_html}
             </div>
             
             <div class="footer">
