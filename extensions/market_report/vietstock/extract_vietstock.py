@@ -51,42 +51,44 @@ async def run():
         foreign_date = dates.get("foreignDate", "")
         prop_date = dates.get("propDate", "")
         
-        from datetime import datetime, timedelta
+        if foreign_date and prop_date and foreign_date != prop_date:
+            import sys
+            print(f"Lỗi LOOPHOLE: Vietstock chập cheng! Bảng Khối ngoại là ({foreign_date}) nhưng Bảng Tự doanh lại là ({prop_date}). Dừng pipeline!")
+            sys.exit(2)
+        
+        # Lưu ngày mới nhất của Vietstock để pipeline kiểm tra chéo
+        output_dir = os.path.dirname(os.path.abspath(__file__))
+        with open(os.path.join(output_dir, "vietstock_date.json"), 'w', encoding='utf-8') as f:
+            json.dump({"latest_date": foreign_date}, f)
 
-        async def fetch_data_with_retry(page, url, token, start_date_str):
-            current_date_str = start_date_str
-            for _ in range(10):
-                data_str = await page.evaluate('''async ({url, token, dateStr}) => {
-                    const formData = new URLSearchParams();
-                    formData.append('selectType', '1');
-                    formData.append('code', '');
-                    formData.append('detailType', '6');
-                    formData.append('criterion', '1');
-                    formData.append('type', '1');
-                    formData.append('dateString', dateStr);
-                    formData.append('__RequestVerificationToken', token);
-                    
-                    const req = await fetch(url, {
-                        method: 'POST',
-                        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-                        body: formData.toString()
-                    });
-                    return await req.text();
-                }''', {"url": url, "token": token, "dateStr": current_date_str})
+        async def fetch_exact_date(page, url, token, date_str):
+            data_str = await page.evaluate('''async ({url, token, dateStr}) => {
+                const formData = new URLSearchParams();
+                formData.append('selectType', '1');
+                formData.append('code', '');
+                formData.append('detailType', '6');
+                formData.append('criterion', '1');
+                formData.append('type', '1');
+                formData.append('dateString', dateStr);
+                formData.append('__RequestVerificationToken', token);
                 
-                if data_str and len(data_str) > 20 and "[[],[]]" not in data_str:
-                    return data_str, current_date_str
-                    
-                try:
-                    dt = datetime.strptime(current_date_str, "%d/%m/%Y")
-                    dt -= timedelta(days=1)
-                    current_date_str = dt.strftime("%d/%m/%Y")
-                except Exception as e:
-                    break
-            return data_str, current_date_str
+                const req = await fetch(url, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                    body: formData.toString()
+                });
+                return await req.text();
+            }''', {"url": url, "token": token, "dateStr": date_str})
+            
+            if not data_str or len(data_str) <= 20 or "[[],[]]" in data_str:
+                import sys
+                print(f"Lỗi: Không tìm thấy dữ liệu trên Vietstock cho ngày {date_str}. Tạm dừng pipeline.")
+                sys.exit(2)
+                
+            return data_str, date_str
 
-        foreign_data_str, foreign_date = await fetch_data_with_retry(page, '/data/KQGDGiaoDichNDTNNTopStockFilter', token, foreign_date)
-        prop_data_str, prop_date = await fetch_data_with_retry(page, '/data/KQGDGiaoDichTuDoanhTopStockFilter', token, prop_date)
+        foreign_data_str, foreign_date = await fetch_exact_date(page, '/data/KQGDGiaoDichNDTNNTopStockFilter', token, foreign_date)
+        prop_data_str, prop_date = await fetch_exact_date(page, '/data/KQGDGiaoDichTuDoanhTopStockFilter', token, prop_date)
          
         await browser.close()
         

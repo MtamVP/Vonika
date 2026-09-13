@@ -41,40 +41,47 @@ def download_vietcap_report(email, password):
         downloaded = False
         output_dir = os.path.dirname(os.path.abspath(__file__))
         
-        for days_back in range(10):
-            date_obj = datetime.now() - timedelta(days=days_back)
-            yyyymm = date_obj.strftime("%Y%m")
-            yyyymmdd = date_obj.strftime("%Y%m%d")
+        import json
+        import sys
+        
+        # Đồng bộ ngày tải file với báo cáo MASVN
+        masvn_data_path = os.path.join(output_dir, "..", "masvn_report", "extracted_data.json")
+        try:
+            with open(masvn_data_path, 'r', encoding='utf-8') as f:
+                d = json.load(f)
+                target_date_str = d.get('report_date', datetime.now().strftime('%d/%m/%Y'))
+        except Exception:
+            target_date_str = datetime.now().strftime('%d/%m/%Y')
             
-            url = f"https://trading.vietcap.com.vn/iq/view-file?file=uploads%2Ffile%2F{yyyymm}%2F{yyyymmdd}_DailyVN.pdf&source=cms"
-            #print(f"Trying to open: {url}")
+        date_obj = datetime.strptime(target_date_str, '%d/%m/%Y')
+        yyyymm = date_obj.strftime("%Y%m")
+        yyyymmdd = date_obj.strftime("%Y%m%d")
+        
+        url = f"https://trading.vietcap.com.vn/iq/view-file?file=uploads%2Ffile%2F{yyyymm}%2F{yyyymmdd}_DailyVN.pdf&source=cms"
+        
+        page.goto(url)
+        
+        try:
+            page.wait_for_selector('.pdf-viewer-icon-btn[title="Tải xuống"]', timeout=10000)
+            page.wait_for_timeout(5000)
             
-            page.goto(url)
+            with page.expect_download(timeout=60000) as download_info:
+                page.locator('.pdf-viewer-icon-btn[title="Tải xuống"]').click(force=True)
             
+            download = download_info.value
+            filename = f"{yyyymmdd}_DailyVN.pdf"
+            output_path = os.path.join(output_dir, filename)
+            download.save_as(output_path)
+            
+            downloaded = True
+        except Exception as e:
             try:
-                page.wait_for_selector('.pdf-viewer-icon-btn[title="Tải xuống"]', timeout=10000)
-                
-                #print("PDF viewer loaded. Waiting 5s for PDF to fully render and blob to generate...")
-                page.wait_for_timeout(5000)
-                
-                #print("Clicking download...")
-                with page.expect_download(timeout=60000) as download_info:
-                    page.locator('.pdf-viewer-icon-btn[title="Tải xuống"]').click(force=True)
-                
-                download = download_info.value
-                filename = f"{yyyymmdd}_DailyVN.pdf"
-                output_path = os.path.join(output_dir, filename)
-                download.save_as(output_path)
-                
-                #print(f"Successfully downloaded: {filename}")
-                downloaded = True
-                break
-            except Exception as e:
-                try:
-                    print(f"Không tìm thấy file ở ngày {yyyymmdd}. Đang thử ngày trước đó...")
-                except UnicodeEncodeError:
-                    print(f"Khong tim thay file o ngay {yyyymmdd}. Dang thu ngay truoc do...")
-                
+                print(f"Không tìm thấy báo cáo Vietcap ngày {target_date_str}. Tạm dừng pipeline để chờ cập nhật.")
+            except UnicodeEncodeError:
+                print(f"Khong tim thay bao cao Vietcap ngay {target_date_str}. Tam dung pipeline.")
+            browser.close()
+            sys.exit(2)
+            
         browser.close()
         return downloaded
 

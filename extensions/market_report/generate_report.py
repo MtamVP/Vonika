@@ -619,11 +619,44 @@ def upload_market_report_to_supabase(pdf_path, folder_name="daily"):
 if __name__ == "__main__":
     import subprocess
     import sys
+    from datetime import datetime, timedelta
     
-    # 1. Cơ chế Tự thoát (Idempotency) - Kiểm tra file của ngày hôm nay đã tồn tại chưa
-    today_date = datetime.now().strftime('%d/%m/%Y')
-    today_file_date = today_date.replace('/', '-')
-    expected_file_name = f"Báo cáo thị trường ngày {today_file_date}.pdf"
+    # 1. Tự động chạy các script cập nhật dữ liệu mới nhất từ MASVN
+    res_download = subprocess.run([sys.executable, "download_report.py"], cwd="masvn_report")
+    if res_download.returncode != 0:
+        sys.exit(1)
+    subprocess.run([sys.executable, "parserReport.py"], cwd="masvn_report", check=True)
+    
+    # 2. Chạy Vietstock ĐẦU TIÊN để lấy mốc thời gian an toàn của thị trường
+    print("Đang lấy dữ liệu từ Vietstock để đối chiếu ngày...")
+    subprocess.run([sys.executable, "extract_vietstock.py"], cwd="vietstock", check=True)
+    
+    # Đọc ngày của Vietstock (Real-time marker)
+    vietstock_date_path = os.path.join("vietstock", "vietstock_date.json")
+    try:
+        with open(vietstock_date_path, 'r', encoding='utf-8') as f:
+            v_data = json.load(f)
+            vietstock_date = v_data.get("latest_date", "")
+    except Exception:
+        vietstock_date = ""
+
+    # Đọc ngày của MASVN (Source of truth cho nội dung)
+    data_path = os.path.join("masvn_report", "extracted_data.json")
+    if not os.path.exists(data_path):
+        sys.exit(1)
+        
+    with open(data_path, 'r', encoding='utf-8') as f:
+        d = json.load(f)
+        report_date = d.get('report_date', "")
+
+    # KIỂM TRA ĐỒNG BỘ: MASVN phải theo kịp Vietstock
+    if vietstock_date and report_date != vietstock_date:
+        print(f"Lệch ngày dữ liệu! Vietstock đã chốt sổ ({vietstock_date}) nhưng MASVN mới chỉ có ({report_date}). Dừng pipeline chờ MASVN cập nhật!")
+        sys.exit(0)
+
+    # 3. Kiểm tra xem báo cáo của ngày đồng bộ này đã có trên Supabase chưa
+    file_date = report_date.replace('/', '-')
+    expected_file_name = f"Báo cáo thị trường ngày {file_date}.pdf"
     
     supabase_url = "https://jqzlmzbvaesczarqptye.supabase.co"
     supabase_key = "sb_publishable_wXUovp36dvd_VwdX-U8ecg_P-OrGwEb"
@@ -641,44 +674,33 @@ if __name__ == "__main__":
     except Exception as e:
         print(f"Lỗi khi kiểm tra file trên Supabase: {e}")
 
-    # Tự động chạy các script cập nhật dữ liệu mới nhất
-    res_download = subprocess.run([sys.executable, "download_report.py"], cwd="masvn_report")
-    if res_download.returncode == 2:
-        print(f"Trang nguồn chưa cập nhật báo cáo hôm nay. Dừng sớm để tiết kiệm tài nguyên.")
+    # 4. Kiểm tra độ trễ của báo cáo (chỉ cho phép báo cáo của Hôm nay hoặc Hôm qua)
+    today_obj = datetime.now()
+    yesterday_obj = today_obj - timedelta(days=1)
+    today_str = today_obj.strftime('%d/%m/%Y')
+    yesterday_str = yesterday_obj.strftime('%d/%m/%Y')
+    
+    if report_date != today_str and report_date != yesterday_str:
+        print(f"Dữ liệu đồng bộ là ngày {report_date}, quá cũ so với hệ thống ({today_str}). Bỏ qua.")
         sys.exit(0)
-    elif res_download.returncode != 0:
-        sys.exit(1)
 
+    # 5. Tải dữ liệu Vietcap (Vietcap đã được lập trình để tải đúng ngày report_date)
+    
+    print("Đang tải & trích xuất báo cáo Vietcap...")
     try:
-        subprocess.run([sys.executable, "parserReport.py"], cwd="masvn_report", check=True)
-        subprocess.run([sys.executable, "extract_vietstock.py"], cwd="vietstock", check=True)
-        
-        print("Đang tải & trích xuất báo cáo Vietcap...")
-        # Sử dụng capture_output=False để không in lỗi ra làm hỏng pipeline nếu failed, hoặc dùng try-except
-        subprocess.run([sys.executable, "auto_download_vietcap.py"], cwd="vietcap")
-        subprocess.run([sys.executable, "parserReports.py"], cwd="vietcap")
+        subprocess.run([sys.executable, "auto_download_vietcap.py"], cwd="vietcap", check=True)
+        subprocess.run([sys.executable, "parserReports.py"], cwd="vietcap", check=True)
     except subprocess.CalledProcessError as e:
+        print(f"Subprocess failed with exit code {e.returncode}. Dừng pipeline.")
         sys.exit(1)
 
     text_path = os.path.join("masvn_report", "extracted_text.json")
-    data_path = os.path.join("masvn_report", "extracted_data.json")
     csv_path = os.path.join("vietstock", "combined_net_trading.csv")
     vietcap_path = os.path.join("vietcap", "extracted_vietcap.json")
     
-    with open(data_path, 'r', encoding='utf-8') as f:
-        d = json.load(f)
-        if 'report_date' in d:
-            report_date = d['report_date']
-            
-    if report_date != today_date:
-        print(f"Dữ liệu web mới nhất là ngày {report_date}, chưa có của hôm nay ({today_date}). Bỏ qua.")
-        sys.exit(0)
-
-    out_path = f"Báo cáo thị trường ngày {report_date.replace('/', '-')}.pdf"
+    out_path = expected_file_name
     
-    if not os.path.exists(csv_path):
-        sys.exit(1)
-    elif not os.path.exists(text_path) or not os.path.exists(data_path):
+    if not os.path.exists(csv_path) or not os.path.exists(text_path):
         sys.exit(1)
     else:
         asyncio.run(build_report_pdf(text_path, data_path, csv_path, vietcap_path, out_path))
