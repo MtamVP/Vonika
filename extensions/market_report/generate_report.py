@@ -93,7 +93,88 @@ def create_index_chart(json_path, output_path):
     plt.savefig(output_path, format='png', dpi=150)
     plt.close()
 
-def generate_markdown_via_ai(text_json_path, data_json_path):
+def dicts_to_html_table(data_list):
+    if not data_list: return ""
+    headers = list(data_list[0].keys())
+    html = "<table><thead><tr>"
+    for h in headers:
+        html += f"<th>{h}</th>"
+    html += "</tr></thead><tbody>"
+    for row in data_list:
+        html += "<tr>"
+        for h in headers:
+            html += f"<td>{row.get(h, '')}</td>"
+        html += "</tr>"
+    html += "</tbody></table>"
+    return html
+
+def clean_markdown_table(md_str):
+    import re
+    lines = md_str.strip().split('\n')
+    if len(lines) < 2: return md_str
+    
+    rows = []
+    for line in lines:
+        if line.strip().startswith('|') and line.strip().endswith('|'):
+            cells = [c.strip() for c in line.strip()[1:-1].split('|')]
+            rows.append(cells)
+            
+    if not rows: return md_str
+    
+    num_cols = max(len(r) for r in rows)
+    for r in rows:
+        r.extend([''] * (num_cols - len(r)))
+        
+    cols = list(zip(*rows))
+    
+    keep_cols = []
+    for col in cols:
+        is_empty = True
+        for i, cell in enumerate(col):
+            if i == 1: continue 
+            if cell and not re.match(r'^[-:]+$', cell):
+                is_empty = False
+                break
+        if not is_empty:
+            keep_cols.append(col)
+            
+    if not keep_cols: return md_str
+    
+    new_rows = list(zip(*keep_cols))
+    new_lines = []
+    for i, r in enumerate(new_rows):
+        if i == 1:
+            new_lines.append("| " + " | ".join(['---']*len(r)) + " |")
+        else:
+            new_lines.append("| " + " | ".join(r) + " |")
+            
+    return '\n'.join(new_lines)
+
+def clean_all_markdown_tables_in_text(full_md):
+    lines = full_md.split('\n')
+    cleaned_lines = []
+    in_table = False
+    table_lines = []
+    
+    for line in lines:
+        if line.strip().startswith('|') and line.strip().endswith('|'):
+            in_table = True
+            table_lines.append(line)
+        else:
+            if in_table:
+                cleaned_table = clean_markdown_table('\n'.join(table_lines))
+                cleaned_lines.append(cleaned_table)
+                table_lines = []
+                in_table = False
+            cleaned_lines.append(line)
+            
+    if in_table:
+        cleaned_table = clean_markdown_table('\n'.join(table_lines))
+        cleaned_lines.append(cleaned_table)
+        
+    return '\n'.join(cleaned_lines)
+
+def generate_markdown_via_ai(text_json_path, data_json_path, vietcap_json_path=None):
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         raise ValueError("Lỗi: Không tìm thấy GEMINI_API_KEY trong environment variables.")
@@ -102,44 +183,49 @@ def generate_markdown_via_ai(text_json_path, data_json_path):
     
     with open(text_json_path, 'r', encoding='utf-8') as f:
         text_data = json.load(f)
-    with open(data_json_path, 'r', encoding='utf-8') as f:
-        json_data = json.load(f)
-    prompt = f"""Bạn là một chuyên gia phân tích tài chính cấp cao. Dưới đây là dữ liệu báo cáo thị trường chứng khoán được trích xuất.
-    Hãy đọc các dữ liệu này và viết ra một bản Báo cáo Thị trường Chứng khoán hoàn chỉnh. 
+        
+    vietcap_text = ""
+    if vietcap_json_path and os.path.exists(vietcap_json_path):
+        with open(vietcap_json_path, 'r', encoding='utf-8') as f:
+            vietcap_data = json.load(f)
+            raw_v_text = vietcap_data.get("full_markdown", "")
+            vietcap_text = clean_all_markdown_tables_in_text(raw_v_text)
+            
+    prompt = f"""Bạn là một chuyên gia phân tích tài chính cấp cao. Dưới đây là dữ liệu báo cáo thị trường từ MASVN và Vietcap.
+Hãy đọc và tổ chức các dữ liệu này thành bản tin thị trường chuyên nghiệp.
 
 VĂN PHONG VÀ CẤU TRÚC YÊU CẦU:
-- Báo cáo phải được viết bằng ngôn ngữ Markdown (sử dụng thẻ ##, ###, **bold**,...).
-- Bắt đầu các phần chính bằng đúng cú pháp "## PHẦN X: [Tên phần]". Ví dụ: "## PHẦN 1: TỔNG QUAN & BẢNG SỐ LIỆU THỊ TRƯỜNG"
-- Có độ dài vừa phải, súc tích, văn phong chuyên nghiệp và sắc sảo.
-- BẮT BUỘC PHẢI CHIA THÀNH ĐÚNG 5 PHẦN theo cấu trúc sau:
+- Viết bằng Markdown.
+- TUYỆT ĐỐI KHÔNG TRỘN LẪN (MIX) số liệu của MASVN và Vietcap vào cùng một câu chuyện. Phải tách biệt rõ ràng thông tin của từng nguồn để đảm bảo tính nhất quán của số liệu.
+- BẮT BUỘC CHỈ SỬ DỤNG 3 HEADING CHÍNH (dùng thẻ ##):
 
-## PHẦN 1: TỔNG QUAN & BẢNG SỐ LIỆU THỊ TRƯỜNG
-Trình bày dữ liệu từ phần "Tổng quan thị trường", "Định giá thị trường" dưới dạng Markdown Table đẹp. (Gồm Bảng 1 - Biến động chỉ số, Bảng 2 - Định giá khu vực).
+## NHẬN ĐỊNH THỊ TRƯỜNG
+- Dùng ĐỘC QUYỀN dữ liệu từ phần "nhan_dinh_thi_truong" của MASVN để viết. Không được lấy số liệu VNI từ Vietcap đưa vào đây để tránh mâu thuẫn.
 
-## PHẦN 2: BỨC TRANH TOÀN CẢNH & CỘI NGUỒN DÒNG TIỀN
-Dựa vào text_data (các đoạn văn bản Nhận định thị trường) để viết lại mạch lạc. Phân tích nguyên nhân cốt lõi chi phối dòng tiền, tổng kết giá trị giao dịch, hành vi mua bán ròng của khối ngoại và tự doanh.
+## GIAO DỊCH KHỐI NGOẠI & TỰ DOANH
+- Dùng ĐỘC QUYỀN dữ liệu của MASVN để đảm bảo thống nhất với phần trên.
 
-## PHẦN 3: ĐỘNG LỰC NHÓM NGÀNH & ĐIỂM SÁNG DOANH NGHIỆP
-Phân tích các nhóm ngành nổi bật (như Tiêu dùng, Ngân hàng, Chứng khoán...) và một số cổ phiếu đáng chú ý dựa trên dữ liệu giao dịch ròng hoặc thông tin bài viết. Đánh giá CƠ HỘI hoặc RỦI RO hoặc THEO DÕI cho từng nhóm.
-
-## PHẦN 4: ĐỊNH VỊ RỦI RO & KHUNG CHIẾN LƯỢC QUẢN TRỊ
-Đánh giá sức mạnh kỹ thuật (dựa trên text_data phần Phân tích kỹ thuật nếu có). Đưa ra Kịch bản Cơ sở (Xác suất 70%) và Kịch bản Rủi ro (Xác suất 30%). Cuối cùng đưa ra Khuyến nghị chiến lược quản trị rủi ro, phân bổ tỷ trọng.
-
-## PHẦN 5: TÓM GỌN TIN TỨC VÀ TÁC ĐỘNG NGOẠI BIÊN
-Tóm tắt các tin tức vĩ mô thế giới, tin doanh nghiệp trong nước có trong text_data. Ghi rõ đánh giá tác động: TRUNG TÍNH, CƠ HỘI, hoặc RỦI RO cho mỗi tin.
+## THÔNG TIN CẬP NHẬT
+- Trình bày lần lượt các tin tức và phân tích doanh nghiệp.
+- BẮT BUỘC phải ghi rõ nguồn ở cuối MỖI tin/bài phân tích (ví dụ: *Nguồn: vietstock.vn*, *Nguồn: Vietcap*...).
+- LƯU Ý TỐI QUAN TRỌNG VỀ ĐỘ DÀI: KHÔNG ĐƯỢC TÓM TẮT QUÁ NGẮN. Phải giữ lại đầy đủ các phân tích chuyên sâu, định giá, khuyến nghị, số liệu chi tiết. Báo cáo TỐI THIỂU phải dài 10-15 trang. Việc rút ngắn là vi phạm yêu cầu.
+- BẮT BUỘC KHÔNG DÙNG THẺ h1 (tức là dấu #). CHỈ SỬ DỤNG 3 HEADING CHÍNH với thẻ h2 (##) như đã yêu cầu. Tuyệt đối không tự bịa thêm tiêu đề tổng đầu trang.
+- DỌN DẸP RÁC VĂN BẢN: Hãy tự động nhận diện và loại bỏ các ký tự rác, tiêu đề trang/chân trang lặp lại do lỗi parse PDF (ví dụ: Trang 14 / 18, Bản tin thị trường, Vonika, v.v.).
+- ĐỊNH DẠNG MARKDOWN: BẮT BUỘC in đậm (**) các từ khóa, tên mã cổ phiếu (ví dụ **MBB**, **HPG**) và các tiêu đề phụ (ví dụ: **Luận điểm đầu tư:**, **Định giá:**) để làm nổi bật thông tin.
+- PHỤC HỒI BẢNG BIỂU: Dữ liệu bảng của Vietcap có thể bị lỗi dính chữ do parse PDF. Bạn HÃY TỰ ĐỘNG PHỤC HỒI và format lại chúng thành các bảng Markdown ngay ngắn, tuyệt đẹp. TUYỆT ĐỐI KHÔNG xóa bỏ bảng, và KHÔNG biến các dòng trong bảng thành các gạch đầu dòng.
+- KỶ LUẬT XUỐNG DÒNG DANH SÁCH: Khi viết các mục liệt kê (như `- Ngành...`, `- Giá...`), BẠN PHẢI CHỦ ĐỘNG XUỐNG DÒNG (Enter 2 lần) trước mỗi dấu `-` hoặc `*` để tạo List chuẩn Markdown. TUYỆT ĐỐI KHÔNG viết dính chùm trên cùng một dòng.
 
 DỮ LIỆU ĐẦU VÀO:
-=== TEXT DATA ===
+=== TEXT DATA MASVN ===
 {json.dumps(text_data, ensure_ascii=False, indent=2)}
 
-=== JSON DATA ===
-{json.dumps(json_data, ensure_ascii=False, indent=2)}
+=== TEXT DATA VIETCAP ===
+{vietcap_text}
 
-Lưu ý: Không dùng markdown code block bao quanh kết quả trả về, chỉ cần trả về text markdown trực tiếp. Đảm bảo dùng đúng tiền tố "## PHẦN 1", "## PHẦN 2", v.v... để hệ thống nhận diện.
 Bắt đầu viết Báo cáo:
 """
     max_retries = 5
-    current_model = "gemini-3.6-flash"
+    current_model = "gemini-3.8-flash"
     for attempt in range(max_retries):
         try:
             response = client.models.generate_content(
@@ -154,9 +240,15 @@ Bắt đầu viết Báo cáo:
                 sleep_time = 20 * (2 ** attempt)
                 print(f"Gemini API 503 Error (High demand). Retrying in {sleep_time}s... (Attempt {attempt+1}/{max_retries})")
                 time.sleep(sleep_time)
-                # Fallback to a lighter model after 2 failed attempts
-                if attempt == 1:
-                    print("Falling back to gemini-2.5-flash due to prolonged high demand.")
+                # Progressive model fallback strategy
+                if attempt == 0:
+                    print("Falling back to gemini-3.7-flash due to high demand.")
+                    current_model = "gemini-3.7-flash"
+                elif attempt == 1:
+                    print("Falling back to gemini-3.6-flash due to prolonged high demand.")
+                    current_model = "gemini-3.6-flash"
+                elif attempt == 2:
+                    print("Falling back to gemini-2.5-flash due to extreme high demand.")
                     current_model = "gemini-2.5-flash"
             else:
                 raise e
@@ -169,23 +261,26 @@ def get_base64_image(image_path):
         return f"data:image/png;base64,{encoded}"
 
 def inject_charts_to_html(html_content, chart1_path, chart1b_path, chart2_path):
-    img1_tag = f'<div style="text-align: center; margin: 20px 0;"><img src="{get_base64_image(chart1_path)}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></div>' if os.path.exists(chart1_path) else ''
-    img1b_tag = f'<div style="text-align: center; margin: 20px 0;"><img src="{get_base64_image(chart1b_path)}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></div>' if os.path.exists(chart1b_path) else ''
-    img2_tag = f'<div style="text-align: center; margin: 20px 0;"><img src="{get_base64_image(chart2_path)}" style="max-width: 100%; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);"></div>' if os.path.exists(chart2_path) else ''
+    img1_tag = f'<div style="text-align: center; margin: 15px 0; clear: both;"><img src="{get_base64_image(chart1_path)}" style="max-width: 100%; height: auto; display: block; margin: 0 auto; border-radius: 4px; border: 1px solid #eee;"></div>' if os.path.exists(chart1_path) else ''
+    img1b_tag = f'<div style="text-align: center; margin: 15px 0; clear: both;"><img src="{get_base64_image(chart1b_path)}" style="max-width: 100%; height: auto; display: block; margin: 0 auto; border-radius: 4px; border: 1px solid #eee;"></div>' if os.path.exists(chart1b_path) else ''
+    img2_tag = f'<div style="text-align: center; margin: 15px 0; clear: both;"><img src="{get_base64_image(chart2_path)}" style="max-width: 100%; height: auto; display: block; margin: 0 auto; border-radius: 4px; border: 1px solid #eee;"></div>' if os.path.exists(chart2_path) else ''
 
-    if '<h2>PHẦN 1' in html_content:
-        parts = html_content.split('<h2>PHẦN 2')
-        if len(parts) == 2:
-            html_content = parts[0] + img2_tag + '<h2>PHẦN 2' + parts[1]
+    # Replace H2 headers with our styled divs and inject charts
+    if '<h2>NHẬN ĐỊNH THỊ TRƯỜNG' in html_content:
+        html_content = html_content.replace('<h2>NHẬN ĐỊNH THỊ TRƯỜNG</h2>', f'{img2_tag}<div class="mas-section-header">NHẬN ĐỊNH THỊ TRƯỜNG</div>')
     
-    if '<h2>PHẦN 2' in html_content:
-        parts = html_content.split('<h2>PHẦN 3')
-        if len(parts) == 2:
-            html_content = parts[0] + img1_tag + img1b_tag + '<h2>PHẦN 3' + parts[1]
-            
+    if '<h2>GIAO DỊCH KHỐI NGOẠI' in html_content:
+        html_content = html_content.replace('<h2>GIAO DỊCH KHỐI NGOẠI &amp; TỰ DOANH</h2>', f'<div class="mas-section-header">GIAO DỊCH KHỐI NGOẠI & TỰ DOANH</div>')
+        html_content = html_content.replace('<h2>GIAO DỊCH KHỐI NGOẠI & TỰ DOANH</h2>', f'<div class="mas-section-header">GIAO DỊCH KHỐI NGOẠI & TỰ DOANH</div>')
+        
+    if '<h2>THÔNG TIN CẬP NHẬT' in html_content:
+        html_content = html_content.replace('<h2>THÔNG TIN CẬP NHẬT</h2>', f'{img1_tag}{img1b_tag}<div class="mas-section-header">THÔNG TIN CẬP NHẬT</div>')
+        
+    # Fallback for any other h2
+    html_content = html_content.replace('<h2>', '<div class="mas-section-header">').replace('</h2>', '</div>')
     return html_content
 
-async def build_report_pdf(text_json, data_json, vietstock_csv, out_pdf):
+async def build_report_pdf(text_json, data_json, vietstock_csv, vietcap_json, out_pdf):
     chart1 = "temp_chart1.png"
     chart1b = "temp_chart1b.png"
     chart2 = "temp_chart2.png"
@@ -196,18 +291,32 @@ async def build_report_pdf(text_json, data_json, vietstock_csv, out_pdf):
         create_proprietary_chart(vietstock_csv, chart1b)
         create_index_chart(data_json, chart2)
         
-        # Bước 2: AI Viết báo cáo
-        md_text = generate_markdown_via_ai(text_json, data_json)
+        # Bước 2: AI Viết báo cáo (Chỉ cho cột phải)
+        md_text = generate_markdown_via_ai(text_json, data_json, vietcap_json)
         
-        # Bước 3: Build HTML
-        html_body = markdown.markdown(md_text, extensions=['tables'])
-        html_body = inject_charts_to_html(html_body, chart1, chart1b, chart2)
+        # Hậu xử lý: Dùng Regex ép xuống dòng cho các bullet points bị AI viết dính chùm
+        import re
+        md_text = re.sub(r'(?<!\n)\s+-\s+\*\*', r'\n\n- **', md_text)
+        md_text = re.sub(r'(?<!\n)\s+\*\s+\*\*', r'\n\n* **', md_text)
         
-        report_date = datetime.now().strftime('%d/%m/%Y')
         with open(data_json, 'r', encoding='utf-8') as f:
             d = json.load(f)
-            if 'report_date' in d:
-                report_date = d['report_date']
+            
+        report_date = datetime.now().strftime('%d/%m/%Y')
+        if 'report_date' in d:
+            report_date = d['report_date']
+
+        # Bước 3: Build HTML Cột Trái (Data Tables)
+        left_html = f'<div style="text-align: center; font-size: 14px; font-weight: bold; color: #7f8c8d; margin-bottom: 15px; text-transform: uppercase;">Báo cáo thị trường<br/>Ngày {report_date}</div>'        
+            
+        for section in ["Tổng quan thị trường", "Định giá thị trường", "Lãi suất tham chiếu", "Tỷ giá ngoại hối", "Giá trị giao dịch bình quân/ngày (triệu US$)"]:
+            if section in d:
+                left_html += f'<div class="mas-table-header">{section}</div>'
+                left_html += dicts_to_html_table(d[section])
+                
+        # Bước 4: Build HTML Cột Phải (Text + Charts)
+        right_html = markdown.markdown(md_text, extensions=['tables'])
+        right_html = inject_charts_to_html(right_html, chart1, chart1b, chart2)
         
         full_html = f"""
         <!DOCTYPE html>
@@ -218,28 +327,170 @@ async def build_report_pdf(text_json, data_json, vietstock_csv, out_pdf):
                 body {{
                     font-family: 'Segoe UI', Arial, sans-serif;
                     color: #333;
-                    line-height: 1.6;
-                    padding: 40px;
+                    line-height: 1.5;
+                    padding: 30px 40px;
                     margin: 0;
+                    background: #fff;
                 }}
-                h1 {{ color: #003366; text-align: center; border-bottom: 2px solid #003366; padding-bottom: 10px; }}
-                h2 {{ color: #004080; margin-top: 30px; border-bottom: 1px solid #ddd; padding-bottom: 5px; }}
-                table {{ width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px; page-break-inside: avoid; }}
-                th, td {{ border: 1px solid #ddd; padding: 10px; text-align: left; }}
-                th {{ background-color: #f2f2f2; color: #333; font-weight: bold; }}
-                li {{ margin-bottom: 8px; }}
-                .footer {{ text-align: center; font-size: 10px; color: #888; margin-top: 50px; border-top: 1px solid #eee; padding-top: 10px; }}
+                .report-container {{
+                    display: flex;
+                    flex-direction: row;
+                    justify-content: space-between;
+                    width: 100%;
+                }}
+                .col-left {{
+                    width: 38%;
+                    padding-right: 20px;
+                    box-sizing: border-box;
+                }}
+                .col-right {{
+                    width: 59%;
+                    box-sizing: border-box;
+                }}
+                
+                /* Style cho các Header bảng bên cột trái */
+                .mas-table-header {{
+                    background-color: #003366;
+                    color: white;
+                    padding: 6px 10px;
+                    font-size: 11px;
+                    font-weight: bold;
+                    text-transform: uppercase;
+                    margin-top: 15px;
+                    margin-bottom: 5px;
+                    border-radius: 2px;
+                }}
+                
+                /* Style cho bảng bên cột trái */
+                .col-left table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 10px;
+                    margin-top: 5px;
+                    margin-bottom: 12px;
+                    table-layout: fixed;
+                    word-wrap: break-word;
+                    color: #333;
+                }}
+                .col-left th, .col-left td {{
+                    border-bottom: 1px solid #e0e0e0;
+                    padding: 6px 4px;
+                    text-align: right;
+                    line-height: 1.3;
+                }}
+                .col-left th {{
+                    background-color: #f0f4f8;
+                    color: #003366;
+                    text-align: center;
+                    font-weight: bold;
+                    border-bottom: 2px solid #003366;
+                }}
+                .col-left tr:nth-child(even) {{
+                    background-color: #f8f9fa;
+                }}
+                .col-left td:first-child {{
+                    text-align: left;
+                    font-weight: 500;
+                }}
+                .vietcap-table-wrapper table {{
+                    font-size: 8px !important;
+                }}
+                .vietcap-table-wrapper th, .vietcap-table-wrapper td {{
+                    padding: 4px 2px !important;
+                }}
+
+                /* Style cho cột phải (Phần nội dung) */
+                .mas-title {{
+                    color: #003366;
+                    font-size: 32px;
+                    font-weight: bold;
+                    margin-bottom: 5px;
+                    border-bottom: 2px solid #003366;
+                    padding-bottom: 10px;
+                }}
+                .mas-section-header {{
+                    background-color: #f2f2f2;
+                    color: #333;
+                    padding: 8px 12px;
+                    font-weight: bold;
+                    font-size: 16px;
+                    margin-top: 25px;
+                    margin-bottom: 10px;
+                    text-transform: uppercase;
+                    border-left: 4px solid #003366;
+                }}
+                .col-right p {{
+                    font-size: 13px;
+                    text-align: justify;
+                    margin-bottom: 12px;
+                }}
+                .col-right h3 {{
+                    color: #003366;
+                    font-size: 16px;
+                    border-left: 3px solid #e67e22;
+                    padding-left: 8px;
+                    margin-top: 25px;
+                    margin-bottom: 12px;
+                }}
+                .col-right h4, .col-right h5 {{
+                    color: #d35400;
+                    font-size: 14px;
+                    margin-top: 15px;
+                    margin-bottom: 8px;
+                }}
+                .col-right table {{
+                    width: 100%;
+                    border-collapse: collapse;
+                    margin: 20px 0;
+                    font-size: 11px;
+                    color: #333;
+                }}
+                .col-right th, .col-right td {{
+                    border: none;
+                    border-bottom: 1px solid #e0e0e0;
+                    padding: 8px 6px;
+                    text-align: right;
+                }}
+                .col-right th {{
+                    background-color: #f0f4f8;
+                    color: #003366;
+                    text-align: center;
+                    font-weight: bold;
+                    border-bottom: 2px solid #003366;
+                }}
+                .col-right tr:nth-child(even) {{
+                    background-color: #f8f9fa;
+                }}
+                .col-right td:first-child, .col-right th:first-child {{
+                    text-align: left;
+                    font-weight: 500;
+                }}
+                .footer {{ 
+                    text-align: center; 
+                    font-size: 11px; 
+                    color: #888; 
+                    margin-top: 40px; 
+                    border-top: 1px solid #eee; 
+                    padding-top: 10px; 
+                }}
+                strong {{
+                    color: #003366;
+                }}
             </style>
         </head>
         <body>
-            <div class="header">
-                <h1 style="margin-bottom: 5px;">BÁO CÁO THỊ TRƯỜNG</h1>
-                <p style="text-align: center; color: #666; margin-top: 0;">Cập nhật ngày {report_date}</p>
+            <div class="report-container">
+                <div class="col-left">
+                    {left_html}
+                </div>
+                <div class="col-right">
+                    <div class="mas-title">Bản tin cuối ngày</div>
+                    {right_html}
+                </div>
             </div>
-            {html_body}
             
             <div class="footer">
-                Báo cáo được tạo tự động bởi Vonika
+                Bản tin cuối ngày - Báo cáo được tạo tự động bởi Vonika - Cập nhật ngày {report_date}
             </div>
         </body>
         </html>
@@ -258,7 +509,11 @@ async def build_report_pdf(text_json, data_json, vietstock_csv, out_pdf):
             await page.pdf(
                 path=out_pdf,
                 format='A4',
-                margin={"top": "0.75in", "right": "0.75in", "bottom": "0.75in", "left": "0.75in"}
+                print_background=True,
+                margin={"top": "1.2in", "right": "0.75in", "bottom": "0.75in", "left": "0.75in"},
+                display_header_footer=True,
+                header_template='<div style="width: 100%; font-size: 11px; padding: 0 0.75in; display: flex; justify-content: space-between; color: #003366; font-family: sans-serif; font-weight: bold;"><span>Vonika</span><span>Bản tin thị trường | Thông tin cập nhật</span></div>',
+                footer_template='<div style="width: 100%; font-size: 9px; text-align: center; color: #7f8c8d; font-family: sans-serif;">Trang <span class="pageNumber"></span> / <span class="totalPages"></span></div>'
             )
             await browser.close()
 
@@ -269,15 +524,15 @@ async def build_report_pdf(text_json, data_json, vietstock_csv, out_pdf):
             if os.path.exists(f):
                 os.remove(f)
 
-def upload_market_report_to_supabase(pdf_path):
+def upload_market_report_to_supabase(pdf_path, folder_name="daily"):
     import unicodedata
     supabase_url = "https://jqzlmzbvaesczarqptye.supabase.co"
     supabase_key = "sb_publishable_wXUovp36dvd_VwdX-U8ecg_P-OrGwEb"
-    backend_url = "https://vonika-git-863156331978.europe-west1.run.app/api"
+    backend_url = "https://vonika-git-110018515227.us-central1.run.app/api"
     
     file_name = os.path.basename(pdf_path)
     safe_name = unicodedata.normalize('NFKD', file_name).encode('ASCII', 'ignore').decode('utf-8')
-    unique_file_name = f"market_reports/{int(datetime.now().timestamp() * 1000)}_{safe_name.replace(' ', '_')}"
+    unique_file_name = f"market_reports/{folder_name}/{int(datetime.now().timestamp() * 1000)}_{safe_name.replace(' ', '_')}"
     
     headers = {
         "apikey": supabase_key,
@@ -379,12 +634,18 @@ if __name__ == "__main__":
     try:
         subprocess.run([sys.executable, "parserReport.py"], cwd="masvn_report", check=True)
         subprocess.run([sys.executable, "extract_vietstock.py"], cwd="vietstock", check=True)
+        
+        print("Đang tải & trích xuất báo cáo Vietcap...")
+        # Sử dụng capture_output=False để không in lỗi ra làm hỏng pipeline nếu failed, hoặc dùng try-except
+        subprocess.run([sys.executable, "auto_download_vietcap.py"], cwd="vietcap")
+        subprocess.run([sys.executable, "parserReports.py"], cwd="vietcap")
     except subprocess.CalledProcessError as e:
         sys.exit(1)
 
     text_path = os.path.join("masvn_report", "extracted_text.json")
     data_path = os.path.join("masvn_report", "extracted_data.json")
     csv_path = os.path.join("vietstock", "combined_net_trading.csv")
+    vietcap_path = os.path.join("vietcap", "extracted_vietcap.json")
     
     with open(data_path, 'r', encoding='utf-8') as f:
         d = json.load(f)
@@ -402,7 +663,7 @@ if __name__ == "__main__":
     elif not os.path.exists(text_path) or not os.path.exists(data_path):
         sys.exit(1)
     else:
-        asyncio.run(build_report_pdf(text_path, data_path, csv_path, out_path))
+        asyncio.run(build_report_pdf(text_path, data_path, csv_path, vietcap_path, out_path))
         
         # Tự động upload báo cáo mới lên Supabase
         upload_market_report_to_supabase(out_path)

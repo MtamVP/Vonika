@@ -24,7 +24,7 @@ OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
 # Supabase config
 SUPABASE_URL = "https://jqzlmzbvaesczarqptye.supabase.co"
 SUPABASE_KEY = "sb_publishable_wXUovp36dvd_VwdX-U8ecg_P-OrGwEb"
-BACKEND_URL = "https://vonika-git-863156331978.europe-west1.run.app/api"
+BACKEND_URL = "https://vonika-git-110018515227.us-central1.run.app/api"
 
 def get_target_files(rollup_type):
     """
@@ -240,11 +240,11 @@ async def build_report_pdf(md_text, title, out_pdf):
     if os.path.exists(temp_html_path):
         os.remove(temp_html_path)
 
-def upload_market_report_to_supabase(pdf_path):
+def upload_market_report_to_supabase(pdf_path, folder_name="daily"):
     import unicodedata
     file_name = os.path.basename(pdf_path)
     safe_name = unicodedata.normalize('NFKD', file_name).encode('ASCII', 'ignore').decode('utf-8')
-    unique_file_name = f"market_reports/{int(datetime.now().timestamp() * 1000)}_{safe_name.replace(' ', '_')}"
+    unique_file_name = f"market_reports/{folder_name}/{int(datetime.now().timestamp() * 1000)}_{safe_name.replace(' ', '_')}"
     
     headers = {
         "apikey": SUPABASE_KEY,
@@ -334,10 +334,15 @@ def delete_source_files(pdf_paths):
                 storage_path = file_url.split("/")[-1]
                 
             if storage_path:
+                # The correct Supabase REST API for deleting objects is to send DELETE to the bucket URL
+                # with a JSON payload containing the prefixes (file paths).
                 del_storage = requests.delete(
-                    f"{SUPABASE_URL}/storage/v1/object/chat-files/{storage_path}", 
-                    headers=headers
+                    f"{SUPABASE_URL}/storage/v1/object/chat-files", 
+                    headers=headers,
+                    json={"prefixes": [urllib.parse.unquote(storage_path)]}
                 )
+                if not del_storage.ok:
+                    print(f"Failed to delete storage file: {del_storage.text}")
 
 def main():
     parser = argparse.ArgumentParser(description="Rolling Report Generator")
@@ -382,7 +387,7 @@ def main():
     out_pdf = f"{title}.pdf"
     print(f"Đang tạo file PDF {out_pdf}...")
     asyncio.run(build_report_pdf(md_text, title, out_pdf))
-    upload_market_report_to_supabase(out_pdf)
+    upload_market_report_to_supabase(out_pdf, rollup_type)
     
     if rollup_type in ["weekly", "monthly"]:
         delete_source_files(target_files)

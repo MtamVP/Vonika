@@ -72,8 +72,8 @@ if __name__ == "__main__":
     if latest_url:
         today_ddmm = datetime.now().strftime('%d%m')
         if filename != f"report_{today_ddmm}.pdf":
-            print(f"Latest report on web is {filename}, but today is report_{today_ddmm}.pdf. Skipping.")
-            sys.exit(2)
+            print(f"Latest report on web is {filename}, but today is report_{today_ddmm}.pdf. Continuing anyway.")
+            # sys.exit(2)
             
         output_file = os.path.join(OUTPUT_DIR, filename)
         
