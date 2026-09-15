@@ -53,7 +53,7 @@ async def run():
         
         if foreign_date and prop_date and foreign_date != prop_date:
             import sys
-            print(f"Lỗi LOOPHOLE: Vietstock chập cheng! Bảng Khối ngoại là ({foreign_date}) nhưng Bảng Tự doanh lại là ({prop_date}). Dừng pipeline!")
+            print(f"Lỗi LOOPHOLE: Vietstock không nhất quán dữ liệu! Bảng Khối ngoại là ({foreign_date}) nhưng Bảng Tự doanh lại là ({prop_date}). Dừng pipeline!")
             sys.exit(2)
         
         # Lưu ngày mới nhất của Vietstock để pipeline kiểm tra chéo
