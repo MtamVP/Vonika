@@ -39,7 +39,7 @@ jobs:
 
       - name: Send Report to Discord
         env:
-          DISCORD_WEBHOOK_URL: "https://discord.com/api/webhooks/1480054412935303190/IS9A2agjFfyMkthPZjN4GxPy9-tw2SCXeHD0LloBLiIerrrzZckBDjmx4_FsaOXdmkXQ"
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
         working-directory: ./extensions/market_report
         run: |
           if [ -f "NEW_REPORT_GENERATED" ]; then
