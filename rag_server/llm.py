@@ -1,7 +1,9 @@
 import os
 from google import genai
 from fastapi import HTTPException
-def build_prompt(query: str, context_chunks: list[dict], chat_history: list[dict]):
+from supabase_client import get_active_system_prompt
+
+def build_prompt(query: str, context_chunks: list[dict], chat_history: list[dict], system_prompt_text: str = ""):
     if not context_chunks:
         context_text = "No context documents provided."
     else:
@@ -16,9 +18,11 @@ def build_prompt(query: str, context_chunks: list[dict], chat_history: list[dict
         for msg in chat_history:
             role_name = "User" if msg.get('role') == 'user' else "AI"
             history_text += f"{role_name}: {msg.get('content')}\n\n"
+            
+    base_instruction = system_prompt_text if system_prompt_text else """You are a highly intelligent financial and data analysis AI assistant. 
+        Answer the user's question based strictly on the provided context below."""
     
-    prompt = f"""You are a highly intelligent financial and data analysis AI assistant. 
-        Answer the user's question based strictly on the provided context below.
+    prompt = f"""{base_instruction}
         
         CRITICAL RULES FOR READING CONTEXT:
         1. TABLE RECOGNITION: The context contains structured tables formatted as "[Dòng X] Cột A: Giá trị | Cột B: Giá trị". 
@@ -62,8 +66,11 @@ def generate_answer(query: str, context_chunks: list[dict], chat_history: list[d
     total_tokens = 0
     prompt = ""
     
+    # Lấy system prompt từ DB
+    active_system_prompt = get_active_system_prompt()
+    
     while True:
-        prompt = build_prompt(query, context_chunks, chat_history)
+        prompt = build_prompt(query, context_chunks, chat_history, active_system_prompt)
         try:
             token_info = client.models.count_tokens(
                 model=model_name,

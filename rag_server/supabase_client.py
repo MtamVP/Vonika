@@ -68,3 +68,17 @@ def get_chat_history(chat_id: int, limit: int = 10):
         .execute()
     )
     return list(reversed(response.data)) if response.data else []
+
+# system_prompts
+
+def get_active_system_prompt():
+    response = supabase.table("system_prompts").select("*").eq("is_active", True).execute()
+    if response.data:
+        record = response.data[0]
+        try:
+            file_data = download_file("system_prompts", record["storage_path"])
+            return file_data.decode('utf-8')
+        except Exception as e:
+            print(f"Error downloading system prompt: {e}")
+            return ""
+    return ""

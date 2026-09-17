@@ -1529,3 +1529,87 @@ async function initApp() {
   }
 }
 initApp();
+
+// --- SYSTEM PROMPT UPLOAD LOGIC ---
+const systemPromptUpload = document.getElementById("system-prompt-upload");
+const systemPromptStatus = document.getElementById("system-prompt-status");
+
+// Function to load the current active system prompt from DB
+async function loadActiveSystemPrompt() {
+    if (!systemPromptStatus) return;
+    try {
+        const { data, error } = await supabaseClient
+            .from("system_prompts")
+            .select("name, is_active")
+            .eq("is_active", true)
+            .limit(1);
+        
+        if (error) throw error;
+        if (data && data.length > 0) {
+            systemPromptStatus.innerText = `Đang bật: ${data[0].name}`;
+            systemPromptStatus.style.color = "#10b981"; // success color
+        } else {
+            systemPromptStatus.innerText = "Chưa có file nào";
+        }
+    } catch (err) {
+        console.error("Lỗi khi tải system prompt hiện tại:", err);
+    }
+}
+
+if (systemPromptUpload) {
+    systemPromptUpload.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        systemPromptStatus.innerText = "Đang tải lên...";
+        systemPromptStatus.style.color = "var(--color-text-secondary)";
+
+        try {
+            // 1. Upload to bucket 'system_prompts'
+            // We use a safe filename to avoid conflicts, or just use the original name
+            const fileName = clearName(file.name) + '_' + Date.now() + '.md';
+            
+            const { data: uploadData, error: uploadError } = await supabaseClient.storage
+                .from("system_prompts")
+                .upload(fileName, file, {
+                    cacheControl: '3600',
+                    upsert: false
+                });
+
+            if (uploadError) throw uploadError;
+
+            // 2. Set all other prompts to is_active = false
+            await supabaseClient
+                .from("system_prompts")
+                .update({ is_active: false })
+                .neq("id", "00000000-0000-0000-0000-000000000000"); // Just a dummy condition to update all
+
+            // 3. Insert new record to 'system_prompts' table and set is_active = true
+            const { data: insertData, error: insertError } = await supabaseClient
+                .from("system_prompts")
+                .insert([
+                    {
+                        name: file.name,
+                        storage_path: fileName,
+                        is_active: true
+                    }
+                ]);
+
+            if (insertError) throw insertError;
+
+            showToast(`Đã tải lên và kích hoạt skill: ${file.name}`, 'success');
+            loadActiveSystemPrompt();
+
+        } catch (error) {
+            console.error("Skill upload error:", error);
+            showToast("Lỗi khi tải lên skill: " + error.message, 'error');
+            systemPromptStatus.innerText = "Lỗi tải lên";
+            systemPromptStatus.style.color = "var(--color-error)";
+        } finally {
+            systemPromptUpload.value = ""; // Reset input
+        }
+    });
+
+    // Load active prompt on startup
+    loadActiveSystemPrompt();
+}

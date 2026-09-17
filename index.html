@@ -247,7 +247,24 @@
                     </div>
                 </div>
 
+                <div class="setting-item">
+                    <div class="setting-icon">
+                        <i class="fa-solid fa-book-journal-whills"></i>
+                    </div>
+                    <div class="setting-info">
+                        <h4 class="setting-name">System Prompts</h4>
+                        <p class="setting-description">Tải lên file .md (vd: SKILL.md)</p>
+                    </div>
+                    <div class="setting-control" style="display: flex; gap: 8px; align-items: center;">
+                        <input type="file" id="system-prompt-upload" accept=".md,.txt" style="display: none;">
+                        <button class="upload-btn" onclick="document.getElementById('system-prompt-upload').click()" style="padding: 8px 12px;">
+                            <i class="fa-solid fa-cloud-arrow-up"></i> Tải lên
+                        </button>
+                        <span id="system-prompt-status" style="font-size: 12px; color: var(--color-text-secondary); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Chưa có file</span>
+                    </div>
                 </div>
+
+            </div>
                 
         </div>
     </div>
