@@ -676,6 +676,39 @@ button#send-btn svg {
   height: 18px;
 }
 
+button#stop-btn {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  background: var(--color-error, #f44336);
+  border: none;
+  color: #ffffff;
+  cursor: pointer;
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  transition:
+    background-color var(--transition-fast),
+    transform 0.1s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+button#stop-btn:hover {
+  background-color: #d32f2f;
+}
+
+button#stop-btn:active {
+  transform: scale(0.95);
+}
+
+button#stop-btn svg {
+  width: 18px;
+  height: 18px;
+}
+
 .attach-file-btn {
   position: absolute;
   right: 64px;

@@ -215,6 +215,8 @@ const chatArea = document.querySelector(".chat-area");
 const chatBox = document.querySelector("#chat-box");
 const chatTitle = document.querySelector("#chat-title");
 const sendBtn = document.querySelector("#send-btn");
+const stopBtn = document.querySelector("#stop-btn");
+let currentAbortController = null;
 const newChatBtn = document.getElementById("new-chat-btn");
 
 function scrollToBottom(smooth = false, delay = 0) {
@@ -452,6 +454,12 @@ async function sendMessages(text) {
 
   sendBtn.disabled = true;
   chatInput.disabled = true;
+  if (stopBtn) {
+    sendBtn.style.display = "none";
+    stopBtn.style.display = "flex";
+  }
+
+  currentAbortController = new AbortController();
 
   try {
     const { data: insertedData, error: dbError } = await supabaseClient
@@ -476,7 +484,7 @@ async function sendMessages(text) {
     scrollToBottom(true, 50);
 
     const fileIds = Array.from(selectedAttachFiles);
-    let { answer, sources, tokens } = await fetchAIResponse(text, fileIds, currentChatId);
+    let { answer, sources, tokens } = await fetchAIResponse(text, fileIds, currentChatId, currentAbortController.signal);
 
     if (tokens) {
       showToast(`Đã sử dụng ${tokens.toLocaleString()} tokens`, 'success');
@@ -494,9 +502,20 @@ async function sendMessages(text) {
       .insert([{ role: "assistant", content: contentToSave, chat_title: titleToSave }]);
   } catch (error) {
     console.error("Error:", error);
+    if (error.name === 'AbortError' || error.message.includes('abort')) {
+      const loadingEl = chatArea.lastElementChild;
+      if (loadingEl && loadingEl.querySelector('.typing-indicator')) {
+        loadingEl.innerHTML = `<div class="content" style="color: var(--color-error, #f44336); font-weight: 500;"><i class="fa-solid fa-circle-stop"></i> Đã dừng tiến trình</div>`;
+      }
+    }
   } finally {
     sendBtn.disabled = false;
     chatInput.disabled = false;
+    if (stopBtn) {
+      stopBtn.style.display = "none";
+      sendBtn.style.display = "flex";
+    }
+    currentAbortController = null;
   }
 }
 
@@ -512,6 +531,14 @@ sendBtn.addEventListener("click", async () => {
   const text = chatInput.value.trim();
   sendMessages(text);
 });
+
+if (stopBtn) {
+  stopBtn.addEventListener("click", () => {
+    if (currentAbortController) {
+      currentAbortController.abort();
+    }
+  });
+}
 
 async function newChatFunction() {
   chatTitle.value = "Chưa có tên";
@@ -1454,13 +1481,14 @@ if (searchBtn && searchInput) {
 
 // Fetch API backend-RAG server
 
-async function fetchAIResponse(question, fileIds = [], currentChatId) {
+async function fetchAIResponse(question, fileIds = [], currentChatId, signal) {
   const model = document.getElementById("model-select")?.value || "gemini-2.5-flash";
   const res = await fetch(`${backend_url}/chat`, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
     },
+    signal: signal,
     body: JSON.stringify({
       query: question,
       file_ids: fileIds.map(id => parseInt(id, 10)),
