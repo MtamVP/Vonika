@@ -1541,7 +1541,7 @@ async function initApp() {
 }
 initApp();
 
-// --- SKILLS MANAGER MODAL LOGIC ---
+// Skill manager logic
 const openSkillsModalBtn = document.getElementById("open-skills-modal-btn");
 const closeSkillsModalBtn = document.getElementById("close-skills-modal-btn");
 const skillsModal = document.getElementById("skills-modal");
