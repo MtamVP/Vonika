@@ -195,10 +195,24 @@ document.addEventListener("mouseup", () => {
   }
 });
 
+const mobileOverlay = document.getElementById("mobile-overlay");
+
 if (toggleLeftBtn) {
   toggleLeftBtn.addEventListener("click", () => {
-    sidebarLeft.classList.toggle("is-collapsed");
-    if (resizerLeft) resizerLeft.classList.toggle("hidden");
+    if (window.innerWidth <= 768) {
+      sidebarLeft.classList.toggle("mobile-open");
+      if (mobileOverlay) mobileOverlay.classList.toggle("active");
+    } else {
+      sidebarLeft.classList.toggle("is-collapsed");
+      if (resizerLeft) resizerLeft.classList.toggle("hidden");
+    }
+  });
+}
+
+if (mobileOverlay) {
+  mobileOverlay.addEventListener("click", () => {
+    sidebarLeft.classList.remove("mobile-open");
+    mobileOverlay.classList.remove("active");
   });
 }
 
