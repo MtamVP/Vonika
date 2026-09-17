@@ -1809,21 +1809,34 @@ button#stop-btn svg {
     padding: 10px 0 0 0;
   }
   
-  .sidebar-left {
+  .sidebar-left,
+  .sidebar-right {
+    display: block; /* Override any previous display: none */
     position: fixed;
     top: 0;
-    left: 0;
     height: 100vh;
     z-index: 1000;
-    transform: translateX(-100%);
     width: 85%;
     max-width: 320px;
-    border-radius: 0 24px 24px 0;
     transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+
+  .sidebar-left {
+    left: 0;
+    transform: translateX(-100%);
+    border-radius: 0 24px 24px 0;
     box-shadow: 4px 0 24px rgba(0,0,0,0.15);
   }
   
-  .sidebar-left.mobile-open {
+  .sidebar-right {
+    right: 0;
+    transform: translateX(100%);
+    border-radius: 24px 0 0 24px;
+    box-shadow: -4px 0 24px rgba(0,0,0,0.15);
+  }
+  
+  .sidebar-left.mobile-open,
+  .sidebar-right.mobile-open {
     transform: translateX(0);
   }
   
@@ -1837,7 +1850,8 @@ button#stop-btn svg {
   }
   
   /* Hide the toggle button inside sidebar on mobile */
-  .sidebar-left .toggle-sidebar-btn {
+  .sidebar-left .toggle-sidebar-btn,
+  .sidebar-right .toggle-sidebar-btn {
     display: none;
   }
   
@@ -1902,6 +1916,6 @@ button#stop-btn svg {
   }
   
   #toggle-right-btn {
-    display: none !important; /* Hide extensions button on mobile */
+    display: flex !important; /* Bring back the extensions button on mobile */
   }
 }

@@ -212,14 +212,20 @@ if (toggleLeftBtn) {
 if (mobileOverlay) {
   mobileOverlay.addEventListener("click", () => {
     sidebarLeft.classList.remove("mobile-open");
+    sidebarRight.classList.remove("mobile-open");
     mobileOverlay.classList.remove("active");
   });
 }
 
 if (toggleRightBtn) {
   toggleRightBtn.addEventListener("click", () => {
-    sidebarRight.classList.toggle("is-collapsed");
-    if (resizerRight) resizerRight.classList.toggle("hidden");
+    if (window.innerWidth <= 768) {
+      sidebarRight.classList.toggle("mobile-open");
+      if (mobileOverlay) mobileOverlay.classList.toggle("active");
+    } else {
+      sidebarRight.classList.toggle("is-collapsed");
+      if (resizerRight) resizerRight.classList.toggle("hidden");
+    }
   });
 }
 
