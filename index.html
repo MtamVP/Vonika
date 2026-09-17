@@ -253,19 +253,42 @@
                     </div>
                     <div class="setting-info">
                         <h4 class="setting-name">System Prompts</h4>
-                        <p class="setting-description">Tải lên file .md (vd: SKILL.md)</p>
+                        <p class="setting-description">Quản lý và chuyển đổi System Prompts</p>
                     </div>
-                    <div class="setting-control" style="display: flex; gap: 8px; align-items: center;">
-                        <input type="file" id="system-prompt-upload" accept=".md,.txt" style="display: none;">
-                        <button class="upload-btn" onclick="document.getElementById('system-prompt-upload').click()" style="padding: 8px 12px;">
-                            <i class="fa-solid fa-cloud-arrow-up"></i> Tải lên
+                    <div class="setting-control">
+                        <button class="upload-btn" id="open-skills-modal-btn" style="padding: 8px 12px; min-width: 110px;">
+                            <i class="fa-solid fa-list-check"></i> Quản lý
                         </button>
-                        <span id="system-prompt-status" style="font-size: 12px; color: var(--color-text-secondary); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Chưa có file</span>
                     </div>
                 </div>
 
             </div>
                 
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="skills-modal">
+        <div class="modal-container" style="max-width: 500px; padding: 25px;">
+            <button class="modal-close" id="close-skills-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="modal-title" style="margin-bottom: 5px;">Quản lý Skill AI</h3>
+            <p style="font-size: 13px; color: var(--color-text-secondary); margin-bottom: 20px;">Tải lên và chuyển đổi giữa các file SKILL.md</p>
+            
+            <div class="modal-content" style="padding: 0;">
+                <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                    <input type="file" id="new-skill-upload" accept=".md,.txt" style="display: none;">
+                    <button class="modal-btn" onclick="document.getElementById('new-skill-upload').click()" style="flex: 1; justify-content: center;">
+                        <i class="fa-solid fa-cloud-arrow-up"></i> Tải file Skill mới
+                    </button>
+                </div>
+                
+                <h4 style="font-size: 14px; font-weight: 600; margin-bottom: 12px; color: var(--color-text); display: flex; justify-content: space-between;">
+                    <span>Danh sách kỹ năng</span>
+                    <i class="fa-solid fa-rotate-right" id="refresh-skills-btn" style="cursor: pointer; color: var(--color-text-secondary);" title="Làm mới"></i>
+                </h4>
+                <div id="skills-list-container" style="display: flex; flex-direction: column; gap: 10px; max-height: 300px; overflow-y: auto; padding-right: 5px;">
+                    <div style="text-align: center; padding: 20px; color: var(--color-text-secondary); font-size: 14px;">Đang tải...</div>
+                </div>
+            </div>
         </div>
     </div>
 

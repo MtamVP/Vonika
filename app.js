@@ -1141,10 +1141,19 @@ async function loadFiles() {
     if (error) throw error;
 
     if (files && files.length > 0) {
+      const savedStateRaw = localStorage.getItem('savedSelectedAttachFiles');
+      const savedState = savedStateRaw ? new Set(JSON.parse(savedStateRaw)) : null;
+
       files.forEach((fileData) => {
         renderFiles(fileData);
         corpusFiles.set(String(fileData.id), fileData);
-        selectedAttachFiles.add(String(fileData.id));
+        if (savedState) {
+          if (savedState.has(String(fileData.id))) {
+            selectedAttachFiles.add(String(fileData.id));
+          }
+        } else {
+          selectedAttachFiles.add(String(fileData.id));
+        }
       });
       updateSelectedFilesCount();
     }
@@ -1207,6 +1216,8 @@ function updateSelectedFilesCount() {
       filesCount.innerHTML = `${selectedAttachFiles.size}/${corpusFiles.size}`;
     }
   }
+  // Lưu state vào local storage mỗi khi update count
+  localStorage.setItem('savedSelectedAttachFiles', JSON.stringify(Array.from(selectedAttachFiles)));
 }
 
 function showSelectedFiles() {
@@ -1530,86 +1541,199 @@ async function initApp() {
 }
 initApp();
 
-// --- SYSTEM PROMPT UPLOAD LOGIC ---
-const systemPromptUpload = document.getElementById("system-prompt-upload");
-const systemPromptStatus = document.getElementById("system-prompt-status");
+// --- SKILLS MANAGER MODAL LOGIC ---
+const openSkillsModalBtn = document.getElementById("open-skills-modal-btn");
+const closeSkillsModalBtn = document.getElementById("close-skills-modal-btn");
+const skillsModal = document.getElementById("skills-modal");
+const skillsListContainer = document.getElementById("skills-list-container");
+const newSkillUpload = document.getElementById("new-skill-upload");
+const refreshSkillsBtn = document.getElementById("refresh-skills-btn");
 
-// Function to load the current active system prompt from DB
-async function loadActiveSystemPrompt() {
-    if (!systemPromptStatus) return;
+if (openSkillsModalBtn) {
+    openSkillsModalBtn.addEventListener("click", () => {
+        if (skillsModal) skillsModal.classList.add("active");
+        loadSkillsList();
+    });
+}
+if (closeSkillsModalBtn) {
+    closeSkillsModalBtn.addEventListener("click", () => {
+        if (skillsModal) skillsModal.classList.remove("active");
+    });
+}
+if (refreshSkillsBtn) {
+    refreshSkillsBtn.addEventListener("click", loadSkillsList);
+}
+if (skillsModal) {
+    skillsModal.addEventListener("click", (e) => {
+        if (e.target === skillsModal) {
+            skillsModal.classList.remove("active");
+        }
+    });
+}
+
+async function loadSkillsList() {
+    if (!skillsListContainer) return;
+    skillsListContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--color-text-secondary); font-size: 14px;"><i class="fa-solid fa-spinner fa-spin"></i> Đang tải danh sách...</div>';
+    
     try {
         const { data, error } = await supabaseClient
             .from("system_prompts")
-            .select("name, is_active")
-            .eq("is_active", true)
-            .limit(1);
-        
+            .select("*")
+            .order("created_at", { ascending: false });
+            
         if (error) throw error;
-        if (data && data.length > 0) {
-            systemPromptStatus.innerText = `Đang bật: ${data[0].name}`;
-            systemPromptStatus.style.color = "#10b981"; // success color
-        } else {
-            systemPromptStatus.innerText = "Chưa có file nào";
+        
+        if (!data || data.length === 0) {
+            skillsListContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--color-text-secondary); font-size: 14px;">Chưa có kỹ năng nào. Hãy tải lên file .md của bạn!</div>';
+            return;
         }
+        
+        skillsListContainer.innerHTML = "";
+        data.forEach(skill => {
+            const dateStr = new Date(skill.created_at).toLocaleDateString('vi-VN', {hour: '2-digit', minute:'2-digit'});
+            const item = document.createElement("div");
+            item.style.cssText = `
+                display: flex; justify-content: space-between; align-items: center; 
+                padding: 12px 15px; border-radius: 8px; 
+                background: ${skill.is_active ? 'rgba(16, 185, 129, 0.1)' : 'var(--color-bg-muted)'};
+                border: 1px solid ${skill.is_active ? '#10b981' : 'transparent'};
+                transition: all 0.2s;
+            `;
+            
+            const leftDiv = document.createElement("div");
+            leftDiv.style.cssText = "display: flex; flex-direction: column; gap: 4px; overflow: hidden; padding-right: 10px;";
+            leftDiv.innerHTML = `
+                <div style="font-weight: 600; font-size: 14px; color: ${skill.is_active ? '#10b981' : 'var(--color-text)'}; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                    ${skill.name}
+                </div>
+                <div style="font-size: 12px; color: var(--color-text-secondary);"><i class="fa-regular fa-clock"></i> ${dateStr}</div>
+            `;
+            
+            const rightDiv = document.createElement("div");
+            rightDiv.style.cssText = "display: flex; gap: 6px; align-items: center;";
+            
+            if (skill.is_active) {
+                const activeBadge = document.createElement("span");
+                activeBadge.innerHTML = '<i class="fa-solid fa-circle-check"></i> Đang hoạt động';
+                activeBadge.style.cssText = "font-size: 12px; color: #10b981; font-weight: 600; padding: 4px 8px; background: rgba(16, 185, 129, 0.1); border-radius: 20px;";
+                rightDiv.appendChild(activeBadge);
+            } else {
+                const activateBtn = document.createElement("button");
+                activateBtn.innerHTML = 'Kích hoạt';
+                activateBtn.title = "Kích hoạt skill này";
+                activateBtn.style.cssText = "font-size: 12px; color: var(--color-text); padding: 4px 10px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; cursor: pointer;";
+                activateBtn.onmouseover = () => { activateBtn.style.borderColor = "#10b981"; activateBtn.style.color = "#10b981"; };
+                activateBtn.onmouseout = () => { activateBtn.style.borderColor = "var(--color-border)"; activateBtn.style.color = "var(--color-text)"; };
+                activateBtn.onclick = () => activateSkill(skill.id, skill.name);
+                rightDiv.appendChild(activateBtn);
+            }
+            
+            const deleteBtn = document.createElement("button");
+            deleteBtn.innerHTML = '<i class="fa-solid fa-trash"></i>';
+            deleteBtn.title = "Xóa";
+            deleteBtn.style.cssText = "font-size: 12px; color: var(--color-text-secondary); padding: 4px 8px; background: none; border: none; cursor: pointer; transition: 0.2s;";
+            deleteBtn.onmouseover = () => { deleteBtn.style.color = "#ef4444"; };
+            deleteBtn.onmouseout = () => { deleteBtn.style.color = "var(--color-text-secondary)"; };
+            deleteBtn.onclick = () => deleteSkill(skill.id, skill.storage_path, skill.name);
+            rightDiv.appendChild(deleteBtn);
+            
+            item.appendChild(leftDiv);
+            item.appendChild(rightDiv);
+            skillsListContainer.appendChild(item);
+        });
+        
     } catch (err) {
-        console.error("Lỗi khi tải system prompt hiện tại:", err);
+        console.error("Lỗi khi tải danh sách skill:", err);
+        skillsListContainer.innerHTML = '<div style="text-align: center; padding: 20px; color: var(--color-error); font-size: 14px;">Lỗi khi tải danh sách. Vui lòng thử lại.</div>';
     }
 }
 
-if (systemPromptUpload) {
-    systemPromptUpload.addEventListener("change", async (e) => {
+async function activateSkill(id, name) {
+    try {
+        const { error: err1 } = await supabaseClient
+            .from("system_prompts")
+            .update({ is_active: false })
+            .neq("id", id); // set all others to false
+            
+        if (err1) throw err1;
+        
+        const { error: err2 } = await supabaseClient
+            .from("system_prompts")
+            .update({ is_active: true })
+            .eq("id", id);
+            
+        if (err2) throw err2;
+        
+        showToast(`Đã kích hoạt kỹ năng: ${name}`, 'success');
+        loadSkillsList();
+    } catch (err) {
+        console.error("Lỗi kích hoạt:", err);
+        showToast("Lỗi khi kích hoạt kỹ năng", 'error');
+    }
+}
+
+async function deleteSkill(id, storage_path, name) {
+    if (!confirm(`Bạn có chắc chắn muốn xóa kỹ năng "${name}" không?`)) return;
+    
+    try {
+        if (storage_path) {
+            const { error: storageErr } = await supabaseClient.storage
+                .from("system_prompts")
+                .remove([storage_path]);
+            if (storageErr) console.warn("Lỗi xóa file storage:", storageErr);
+        }
+        
+        const { error: dbErr } = await supabaseClient
+            .from("system_prompts")
+            .delete()
+            .eq("id", id);
+            
+        if (dbErr) throw dbErr;
+        
+        showToast(`Đã xóa kỹ năng: ${name}`, 'success');
+        loadSkillsList();
+    } catch (err) {
+        console.error("Lỗi xóa skill:", err);
+        showToast("Lỗi khi xóa kỹ năng", 'error');
+    }
+}
+
+if (newSkillUpload) {
+    newSkillUpload.addEventListener("change", async (e) => {
         const file = e.target.files[0];
         if (!file) return;
 
-        systemPromptStatus.innerText = "Đang tải lên...";
-        systemPromptStatus.style.color = "var(--color-text-secondary)";
+        showToast(`Đang tải lên: ${file.name}...`, 'info');
 
         try {
-            // 1. Upload to bucket 'system_prompts'
-            // We use a safe filename to avoid conflicts, or just use the original name
             const fileName = clearName(file.name) + '_' + Date.now() + '.md';
             
-            const { data: uploadData, error: uploadError } = await supabaseClient.storage
+            const { error: uploadError } = await supabaseClient.storage
                 .from("system_prompts")
-                .upload(fileName, file, {
-                    cacheControl: '3600',
-                    upsert: false
-                });
+                .upload(fileName, file, { cacheControl: '3600', upsert: false });
 
             if (uploadError) throw uploadError;
 
-            // 2. Set all other prompts to is_active = false
+            // Turn off others
             await supabaseClient
                 .from("system_prompts")
                 .update({ is_active: false })
-                .neq("id", "00000000-0000-0000-0000-000000000000"); // Just a dummy condition to update all
+                .neq("id", "00000000-0000-0000-0000-000000000000");
 
-            // 3. Insert new record to 'system_prompts' table and set is_active = true
-            const { data: insertData, error: insertError } = await supabaseClient
+            // Insert new
+            const { error: insertError } = await supabaseClient
                 .from("system_prompts")
-                .insert([
-                    {
-                        name: file.name,
-                        storage_path: fileName,
-                        is_active: true
-                    }
-                ]);
+                .insert([{ name: file.name, storage_path: fileName, is_active: true }]);
 
             if (insertError) throw insertError;
 
-            showToast(`Đã tải lên và kích hoạt skill: ${file.name}`, 'success');
-            loadActiveSystemPrompt();
-
+            showToast(`Đã tải lên và kích hoạt: ${file.name}`, 'success');
+            loadSkillsList();
         } catch (error) {
             console.error("Skill upload error:", error);
-            showToast("Lỗi khi tải lên skill: " + error.message, 'error');
-            systemPromptStatus.innerText = "Lỗi tải lên";
-            systemPromptStatus.style.color = "var(--color-error)";
+            showToast("Lỗi tải lên: " + error.message, 'error');
         } finally {
-            systemPromptUpload.value = ""; // Reset input
+            newSkillUpload.value = "";
         }
     });
-
-    // Load active prompt on startup
-    loadActiveSystemPrompt();
 }
