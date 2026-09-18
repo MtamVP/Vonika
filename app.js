@@ -1657,6 +1657,19 @@ async function loadSkillsList() {
             deleteBtn.onclick = () => deleteSkill(skill.id, skill.storage_path, skill.name);
             rightDiv.appendChild(deleteBtn);
             
+            const deActiveBtn = document.createElement("button");
+            deActiveBtn.innerHTML = '<i class="fa-solid fa-pause"></i>';
+            deActiveBtn.title = "Tạm dừng";
+            deActiveBtn.style.cssText = "font-size: 12px; color: var(--color-text); padding: 4px 10px; background: var(--color-bg); border: 1px solid var(--color-border); border-radius: 6px; cursor: pointer;";
+            deActiveBtn.onmouseover = () => { deActiveBtn.style.borderColor = "#10b981"; deActiveBtn.style.color = "#10b981"; };
+            deActiveBtn.onmouseout = () => { deActiveBtn.style.borderColor = "var(--color-border)"; deActiveBtn.style.color = "var(--color-text)"; };
+            deActiveBtn.onclick = () => deActiveSkill(skill.id, skill.name);
+            if (skill.is_active) {
+                rightDiv.appendChild(deActiveBtn);
+            }
+
+
+
             item.appendChild(leftDiv);
             item.appendChild(rightDiv);
             skillsListContainer.appendChild(item);
@@ -1715,6 +1728,25 @@ async function deleteSkill(id, storage_path, name) {
     } catch (err) {
         console.error("Lỗi xóa skill:", err);
         showToast("Lỗi khi xóa kỹ năng", 'error');
+    }
+}
+
+async function deActiveSkill(id, name) {
+    if (!confirm(`Bạn có chắc chắn muốn tắt kỹ năng "${name}" không?`)) return;
+    
+    try {
+        const { error: err1 } = await supabaseClient
+            .from("system_prompts")
+            .update({ is_active: false })
+            .eq("id", id);
+            
+        if (err1) throw err1;
+        
+        showToast(`Đã tắt kỹ năng: ${name}`, 'success');
+        loadSkillsList();
+    } catch (err) {
+        console.error("Lỗi tắt skill:", err);
+        showToast("Lỗi khi tắt kỹ năng", 'error');
     }
 }
 
