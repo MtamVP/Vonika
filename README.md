@@ -62,6 +62,11 @@ Query → Tokenize → BM25 ┐
 - **Vietnamese NLP Integration**: Utilize `underthesea` for custom tokenization tailored to Vietnamese text, coupled with a hybrid retrieval pipeline (BM25 and TF-IDF).
 - **Reciprocal Rank Fusion (RRF)**: Combine keyword-based exact matching with term frequency scoring to accurately identify and retrieve the most relevant text segments.
 
+### System Extensibility and Automation
+- **AI Skills Management**: Dynamically configure the system's reasoning framework by uploading and toggling custom `SKILL.md` instruction sets without altering the underlying codebase.
+- **Advanced Model Selection**: Seamlessly switch between multiple language models (e.g., Gemini 3.5 Flash, Gemini 2.5 Flash, Flash-Lite) to optimize for computational efficiency or reasoning depth.
+- **Automated Market Reporting**: Utilize scheduled automation workflows (via GitHub Actions) to aggregate data, synthesize periodic reports, and automatically distribute findings to external channels like Discord while synchronizing with the database.
+
 ### User Interface and Interaction
 - **Persistent Chat History**: Store conversation threads securely with automatically generated and user-editable titles.
 - **Responsive Design**: Adapt to different screen sizes with a flexible layout, including theme selection and collapsible navigation sidebars.
