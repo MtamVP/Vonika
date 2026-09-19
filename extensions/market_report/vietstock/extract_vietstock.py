@@ -27,25 +27,21 @@ async def run():
         
         # 3. Extract Dates from chart titles
         dates = await page.evaluate('''() => {
-            let texts = [];
-            document.querySelectorAll('span, h2, h3, div').forEach(el => {
-                let txt = el.textContent || '';
-                if (txt.includes('Giá trị giao dịch ròng theo mã CK ngày')) {
-                    texts.push(txt.trim());
-                }
-            });
             let dateMatches = [];
-            texts.forEach(t => {
-                let m = t.match(/(\\d{2}\\/\\d{2}\\/\\d{4})/);
-                if (m && !dateMatches.includes(m[1])) {
-                    dateMatches.push(m[1]);
+            document.querySelectorAll('span, h2, h3, div, p').forEach(el => {
+                let txt = (el.textContent || '').trim();
+                if (txt.includes('Giá trị giao dịch ròng theo mã CK ngày') && txt.length < 200) {
+                    let m = txt.match(/Giá trị giao dịch ròng theo mã CK ngày (\\d{2}\\/\\d{2}\\/\\d{4})/);
+                    if (m && !dateMatches.includes(m[1])) {
+                        dateMatches.push(m[1]);
+                    }
                 }
             });
             
             let foreignDate = dateMatches.length > 0 ? dateMatches[0] : '';
             let propDate = dateMatches.length > 1 ? dateMatches[1] : foreignDate;
             
-            return { foreignDate, propDate, texts };
+            return { foreignDate, propDate };
         }''')
         
         foreign_date = dates.get("foreignDate", "")

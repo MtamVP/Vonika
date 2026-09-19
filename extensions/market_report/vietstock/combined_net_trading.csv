@@ -1,41 +1,41 @@
 ﻿Date,StockSymbol,NetTradingValue,InvestorType,TradeDirection
-11/09/2026,BSR,109.725405,Nhà đầu tư nước ngoài,Mua ròng
-11/09/2026,VIC,64.35834,Nhà đầu tư nước ngoài,Mua ròng
-11/09/2026,DGW,42.663565,Nhà đầu tư nước ngoài,Mua ròng
-11/09/2026,PVT,39.745885,Nhà đầu tư nước ngoài,Mua ròng
-11/09/2026,PNJ,39.161695,Nhà đầu tư nước ngoài,Mua ròng
-11/09/2026,TCB,33.871735,Nhà đầu tư nước ngoài,Mua ròng
-11/09/2026,VCB,26.16187,Nhà đầu tư nước ngoài,Mua ròng
-11/09/2026,PVS,20.57113,Nhà đầu tư nước ngoài,Mua ròng
-11/09/2026,DCM,17.6652,Nhà đầu tư nước ngoài,Mua ròng
-11/09/2026,NAF,12.52524,Nhà đầu tư nước ngoài,Mua ròng
-11/09/2026,STB,229.40654,Nhà đầu tư nước ngoài,Bán ròng
-11/09/2026,MBB,140.402205,Nhà đầu tư nước ngoài,Bán ròng
-11/09/2026,VPB,134.294705,Nhà đầu tư nước ngoài,Bán ròng
-11/09/2026,VHM,93.85869,Nhà đầu tư nước ngoài,Bán ròng
-11/09/2026,VNM,71.20519,Nhà đầu tư nước ngoài,Bán ròng
-11/09/2026,VCI,53.86656,Nhà đầu tư nước ngoài,Bán ròng
-11/09/2026,HDB,49.413335,Nhà đầu tư nước ngoài,Bán ròng
-11/09/2026,HPG,42.04814,Nhà đầu tư nước ngoài,Bán ròng
-11/09/2026,MSN,39.93569,Nhà đầu tư nước ngoài,Bán ròng
-11/09/2026,TCX,32.33234,Nhà đầu tư nước ngoài,Bán ròng
-11/09/2026,VPB,32.661077,Tự doanh,Mua ròng
-11/09/2026,PVS,19.4536,Tự doanh,Mua ròng
-11/09/2026,MSB,9.72155,Tự doanh,Mua ròng
-11/09/2026,SSB,6.939334,Tự doanh,Mua ròng
-11/09/2026,BID,5.803,Tự doanh,Mua ròng
-11/09/2026,SSI,5.2997,Tự doanh,Mua ròng
-11/09/2026,VCB,5.10432,Tự doanh,Mua ròng
-11/09/2026,SAB,4.13021,Tự doanh,Mua ròng
-11/09/2026,KDH,3.814535,Tự doanh,Mua ròng
-11/09/2026,TLG,2.898545,Tự doanh,Mua ròng
-11/09/2026,HPG,55.66223,Tự doanh,Bán ròng
-11/09/2026,MBB,25.89558,Tự doanh,Bán ròng
-11/09/2026,MSN,16.65198,Tự doanh,Bán ròng
-11/09/2026,FPT,15.12784,Tự doanh,Bán ròng
-11/09/2026,NAF,14.46,Tự doanh,Bán ròng
-11/09/2026,VHM,12.74775,Tự doanh,Bán ròng
-11/09/2026,CTG,12.58926,Tự doanh,Bán ròng
-11/09/2026,HDB,9.7268,Tự doanh,Bán ròng
-11/09/2026,VIB,9.037,Tự doanh,Bán ròng
-11/09/2026,VIX,7.740425,Tự doanh,Bán ròng
+18/09/2026,HPG,250.629215,Nhà đầu tư nước ngoài,Mua ròng
+18/09/2026,PNJ,247.0960175,Nhà đầu tư nước ngoài,Mua ròng
+18/09/2026,SHB,220.98652,Nhà đầu tư nước ngoài,Mua ròng
+18/09/2026,STB,201.67012,Nhà đầu tư nước ngoài,Mua ròng
+18/09/2026,NVL,201.28226,Nhà đầu tư nước ngoài,Mua ròng
+18/09/2026,MCH,163.93054,Nhà đầu tư nước ngoài,Mua ròng
+18/09/2026,HDB,139.44138,Nhà đầu tư nước ngoài,Mua ròng
+18/09/2026,FPT,134.50061,Nhà đầu tư nước ngoài,Mua ròng
+18/09/2026,SSI,126.16686,Nhà đầu tư nước ngoài,Mua ròng
+18/09/2026,VJC,126.16582,Nhà đầu tư nước ngoài,Mua ròng
+18/09/2026,VIC,319.90427,Nhà đầu tư nước ngoài,Bán ròng
+18/09/2026,TCB,199.489545,Nhà đầu tư nước ngoài,Bán ròng
+18/09/2026,CTG,163.27773,Nhà đầu tư nước ngoài,Bán ròng
+18/09/2026,VPB,119.32176,Nhà đầu tư nước ngoài,Bán ròng
+18/09/2026,MBB,103.623775,Nhà đầu tư nước ngoài,Bán ròng
+18/09/2026,VHM,65.557,Nhà đầu tư nước ngoài,Bán ròng
+18/09/2026,ACB,49.136525,Nhà đầu tư nước ngoài,Bán ròng
+18/09/2026,CEO,35.66004,Nhà đầu tư nước ngoài,Bán ròng
+18/09/2026,BSR,32.665285,Nhà đầu tư nước ngoài,Bán ròng
+18/09/2026,VPL,27.01344,Nhà đầu tư nước ngoài,Bán ròng
+18/09/2026,VPB,267.666373,Tự doanh,Mua ròng
+18/09/2026,PNJ,61.398,Tự doanh,Mua ròng
+18/09/2026,TAB,19.5195,Tự doanh,Mua ròng
+18/09/2026,TCB,12.331995,Tự doanh,Mua ròng
+18/09/2026,CTG,10.799375,Tự doanh,Mua ròng
+18/09/2026,MWG,8.701658,Tự doanh,Mua ròng
+18/09/2026,VCB,6.36199,Tự doanh,Mua ròng
+18/09/2026,E1VFVN30,6.019057,Tự doanh,Mua ròng
+18/09/2026,SHB,3.534285,Tự doanh,Mua ròng
+18/09/2026,VIB,3.306072,Tự doanh,Mua ròng
+18/09/2026,MCH,153.45513,Tự doanh,Bán ròng
+18/09/2026,FPT,114.25467,Tự doanh,Bán ròng
+18/09/2026,ACB,30.285585,Tự doanh,Bán ròng
+18/09/2026,STB,22.63624,Tự doanh,Bán ròng
+18/09/2026,HPG,21.59387,Tự doanh,Bán ròng
+18/09/2026,MBB,18.42575,Tự doanh,Bán ròng
+18/09/2026,FUESSVFL,17.090613,Tự doanh,Bán ròng
+18/09/2026,DMX,12.50805,Tự doanh,Bán ròng
+18/09/2026,VHM,11.41732,Tự doanh,Bán ròng
+18/09/2026,SSB,9.137032,Tự doanh,Bán ròng
