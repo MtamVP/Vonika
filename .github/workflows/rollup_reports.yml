@@ -2,16 +2,17 @@ name: Rolling Report Aggregation
 
 on:
 #  schedule:
-#    # 02:15 UTC Thứ 7 hàng tuần -> Báo cáo Tuần
-#    - cron: '15 2 * * 6'
-#    # 03:15 UTC Mùng 1 hàng tháng -> Báo cáo Tháng
-#    - cron: '15 3 1 * *'
-#    # 04:15 UTC Mùng 1 các tháng 1,4,7,10 -> Báo cáo Quý
-#    - cron: '15 4 1 1,4,7,10 *'
-#    # 05:15 UTC Mùng 1 các tháng 1,7 -> Báo cáo Nửa năm
-#    - cron: '15 5 1 1,7 *'
-#    # 06:15 UTC Mùng 1 tháng 1 -> Báo cáo Năm
-#    - cron: '15 6 1 1 *'
+  schedule:
+    # 02:15 UTC Thứ 7 hàng tuần -> Báo cáo Tuần
+    - cron: '15 2 * * 6'
+    # 03:15 UTC Mùng 1 hàng tháng -> Báo cáo Tháng
+    - cron: '15 3 1 * *'
+    # 04:15 UTC Mùng 1 các tháng 1,4,7,10 -> Báo cáo Quý
+    - cron: '15 4 1 1,4,7,10 *'
+    # 05:15 UTC Mùng 1 các tháng 1,7 -> Báo cáo Nửa năm
+    - cron: '15 5 1 1,7 *'
+    # 06:15 UTC Mùng 1 tháng 1 -> Báo cáo Năm
+    - cron: '15 6 1 1 *'
   workflow_dispatch:
     inputs:
       rollup_type:
