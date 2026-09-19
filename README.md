@@ -51,12 +51,20 @@ Query → Tokenize → BM25 ┐
 
 ---
 
-## Features
+## Key Features and Practical Applications
 
-- Multi-format upload: PDF, DOCX, TXT, JSON, XLSX, CSV, TSV, MD — via file picker, folder upload, drag-and-drop, or paste
-- Per-message file selection: attach only the documents relevant to a given question
-- Persistent chat history with auto-generated (and editable) titles
-- Light/dark theme, resizable/collapsible sidebars, responsive layout
+### Intelligent Document Question Answering
+- **Multi-Format Support**: Process various document formats including PDF, DOCX, TXT, JSON, XLSX, CSV, TSV, and MD.
+- **Context-Grounded Responses**: Query the system and retrieve answers strictly based on the provided document context, which significantly reduces generative hallucinations.
+- **Targeted File Attachment**: Isolate search context by attaching specific documents to individual queries.
+
+### Optimized Retrieval Engine
+- **Vietnamese NLP Integration**: Utilize `underthesea` for custom tokenization tailored to Vietnamese text, coupled with a hybrid retrieval pipeline (BM25 and TF-IDF).
+- **Reciprocal Rank Fusion (RRF)**: Combine keyword-based exact matching with term frequency scoring to accurately identify and retrieve the most relevant text segments.
+
+### User Interface and Interaction
+- **Persistent Chat History**: Store conversation threads securely with automatically generated and user-editable titles.
+- **Responsive Design**: Adapt to different screen sizes with a flexible layout, including theme selection and collapsible navigation sidebars.
 
 ---
 
@@ -74,18 +82,49 @@ Query → Tokenize → BM25 ┐
 
 ---
 
-## Running it locally
+## How to Build and Run Locally
 
+### Prerequisites
+- Python 3.9+ installed.
+- A free [Supabase](https://supabase.com/) account.
+- A free [Google Gemini API Key](https://aistudio.google.com/).
+
+### 1. Database Setup (Supabase)
+1. Create a new Supabase project.
+2. Go to the **SQL Editor** and run the following script to initialize the schema:
+   ```sql
+   -- Create tables
+   CREATE TABLE chat_messages (id SERIAL PRIMARY KEY, role TEXT, content TEXT, chat_title TEXT, created_at TIMESTAMP DEFAULT NOW());
+   CREATE TABLE uploaded_files (id SERIAL PRIMARY KEY, file_name TEXT, file_url TEXT, created_at TIMESTAMP DEFAULT NOW());
+   CREATE TABLE document (id SERIAL PRIMARY KEY, file_id INTEGER, chunk_index INTEGER, content TEXT);
+   ```
+3. Go to **Storage** and create a new public bucket named `chat-files`.
+
+### 2. Backend Setup
 ```bash
-# Backend
+# Navigate to the backend directory
 cd rag_server
+
+# Create and activate a virtual environment (optional but recommended)
+python -m venv venv
+source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+# Install dependencies
 pip install -r requirements.txt
-# add your Supabase and Gemini API keys to .env — see .env.example
+
+# Configure environment variables
+cp .env.example .env
+# Edit .env and add your GEMINI_API_KEY, SUPABASE_URL, and SUPABASE_KEY
+
+# Start the FastAPI server
 uvicorn main:app --reload
-
 ```
+*The API will be available at `http://localhost:8000`.*
 
-_(Fill in actual env vars, ports, and any Supabase table setup steps needed to get a fresh clone running.)_
+### 3. Frontend Setup
+Since the frontend uses Vanilla JS, no build step is required!
+1. Open `index.html` directly in your browser, or use an extension like **Live Server** in VS Code.
+2. Ensure the API endpoint in your JS code points to `http://localhost:8000`.
 
 ---
 
