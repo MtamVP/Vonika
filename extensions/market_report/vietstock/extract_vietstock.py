@@ -7,7 +7,8 @@ from playwright.async_api import async_playwright
 async def run():
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
+        context = await browser.new_context(timezone_id="Asia/Ho_Chi_Minh")
+        page = await context.new_page()
         
         try:
             await page.goto("https://finance.vietstock.vn/", wait_until="domcontentloaded", timeout=60000)
