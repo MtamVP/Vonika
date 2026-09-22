@@ -13,7 +13,7 @@ def download_vietcap_report(email, password):
         page = context.new_page()
         
         #print("Navigating to Vietcap homepage...")
-        page.goto("https://trading.vietcap.com.vn/")
+        page.goto("https://trading.vietcap.com.vn/", wait_until="domcontentloaded", timeout=60000)
         
         #print("Clicking login button on homepage...")
         page.locator('.main-login--I81cI').click()
@@ -59,7 +59,7 @@ def download_vietcap_report(email, password):
         
         url = f"https://trading.vietcap.com.vn/iq/view-file?file=uploads%2Ffile%2F{yyyymm}%2F{yyyymmdd}_DailyVN.pdf&source=cms"
         
-        page.goto(url)
+        page.goto(url, wait_until="domcontentloaded", timeout=60000)
         
         try:
             page.wait_for_selector('.pdf-viewer-icon-btn[title="Tải xuống"]', timeout=10000)
