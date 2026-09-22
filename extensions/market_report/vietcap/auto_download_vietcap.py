@@ -62,11 +62,11 @@ def download_vietcap_report(email, password):
         page.goto(url, wait_until="domcontentloaded", timeout=60000)
         
         try:
-            page.wait_for_selector('.pdf-viewer-icon-btn[title="Tải xuống"]', timeout=10000)
+            page.wait_for_selector('.pdf-viewer-icon-btn[title="Tải xuống"], .pdf-viewer-icon-btn[title="Download"]', timeout=10000)
             page.wait_for_timeout(5000)
             
             with page.expect_download(timeout=60000) as download_info:
-                page.locator('.pdf-viewer-icon-btn[title="Tải xuống"]').click(force=True)
+                page.locator('.pdf-viewer-icon-btn[title="Tải xuống"], .pdf-viewer-icon-btn[title="Download"]').click(force=True)
             
             download = download_info.value
             filename = f"{yyyymmdd}_DailyVN.pdf"
