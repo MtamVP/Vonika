@@ -4,7 +4,7 @@ from playwright.sync_api import sync_playwright
 
 def download_vietcap_report(email, password):
 
-    headless_mode = False
+    headless_mode = True
     
     with sync_playwright() as p:
         #print("Launching browser...")
