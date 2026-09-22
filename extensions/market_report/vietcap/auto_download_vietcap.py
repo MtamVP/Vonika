@@ -62,11 +62,24 @@ def download_vietcap_report(email, password):
         page.goto(url, wait_until="domcontentloaded", timeout=60000)
         
         try:
-            page.wait_for_selector('.pdf-viewer-icon-btn[title="Tải xuống"], .pdf-viewer-icon-btn[title="Download"]', timeout=10000)
+            # Chờ ít nhất 1 nút của PDF viewer xuất hiện
+            page.wait_for_selector('.pdf-viewer-icon-btn', timeout=20000)
+            
+            # Debug: In ra tất cả các nút hiện có
+            titles = page.evaluate('''() => {
+                return Array.from(document.querySelectorAll(".pdf-viewer-icon-btn")).map(b => b.title)
+            }''')
+            print(f"[DEBUG] Found PDF buttons: {titles}")
+            
             page.wait_for_timeout(5000)
             
             with page.expect_download(timeout=60000) as download_info:
-                page.locator('.pdf-viewer-icon-btn[title="Tải xuống"], .pdf-viewer-icon-btn[title="Download"]').click(force=True)
+                download_btn = page.locator('.pdf-viewer-icon-btn[title="Tải xuống"], .pdf-viewer-icon-btn[title="Download"]')
+                if download_btn.count() > 0:
+                    download_btn.first.click(force=True)
+                else:
+                    print("[DEBUG] Falling back to the 4th button (index 3)")
+                    page.locator('.pdf-viewer-icon-btn').nth(3).click(force=True)
             
             download = download_info.value
             filename = f"{yyyymmdd}_DailyVN.pdf"
@@ -75,6 +88,13 @@ def download_vietcap_report(email, password):
             
             downloaded = True
         except Exception as e:
+            print(f"[DEBUG] Error encountered: {e}")
+            print("[DEBUG] Current URL:", page.url)
+            try:
+                print("[DEBUG] Page Text snippet:", page.evaluate('document.body.innerText')[:500])
+            except:
+                pass
+            
             try:
                 print(f"Không tìm thấy báo cáo Vietcap ngày {target_date_str}. Tạm dừng pipeline để chờ cập nhật.")
             except UnicodeEncodeError:
