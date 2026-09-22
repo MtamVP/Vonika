@@ -90,6 +90,15 @@ def download_vietcap_report(email, password):
         except Exception as e:
             print(f"[DEBUG] Error encountered: {e}")
             print("[DEBUG] Current URL:", page.url)
+            
+            try:
+                # Save screenshot directly to market_report directory so the workflow can find it
+                screenshot_path = os.path.join(output_dir, "..", "error.png")
+                page.screenshot(path=screenshot_path, full_page=True)
+                print(f"[DEBUG] Saved screenshot to {screenshot_path}")
+            except Exception as ss_e:
+                print(f"[DEBUG] Failed to take screenshot: {ss_e}")
+                
             try:
                 print("[DEBUG] Page Text snippet:", page.evaluate('document.body.innerText')[:500])
             except:

@@ -37,6 +37,14 @@ jobs:
         run: |
           python generate_report.py
 
+      - name: Upload Debug Screenshot
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: error-screenshot
+          path: ./extensions/market_report/error.png
+          if-no-files-found: ignore
+
       - name: Send Report to Discord
         env:
           DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
