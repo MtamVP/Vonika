@@ -25,6 +25,7 @@ jobs:
 
       - name: Install dependencies
         run: |
+          sudo apt-get update && sudo apt-get install -y xvfb
           python -m pip install --upgrade pip
           pip install pandas matplotlib markdown google-genai playwright python-dotenv requests pdfplumber pymupdf
           # Cài đặt trình duyệt cho playwright
@@ -35,7 +36,7 @@ jobs:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         working-directory: ./extensions/market_report
         run: |
-          python generate_report.py
+          xvfb-run --auto-servernum --server-args="-screen 0 1280x960x24" python generate_report.py
 
       - name: Upload Debug Screenshot
         if: failure()
