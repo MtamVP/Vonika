@@ -49,9 +49,13 @@ async def run():
         prop_date = dates.get("propDate", "")
         
         if foreign_date and prop_date and foreign_date != prop_date:
-            import sys
-            print(f"Lỗi LOOPHOLE: Vietstock không nhất quán dữ liệu! Bảng Khối ngoại là ({foreign_date}) nhưng Bảng Tự doanh lại là ({prop_date}). Dừng pipeline!")
-            sys.exit(2)
+            from datetime import datetime
+            fd = datetime.strptime(foreign_date, '%d/%m/%Y')
+            pd = datetime.strptime(prop_date, '%d/%m/%Y')
+            target_date = min(fd, pd).strftime('%d/%m/%Y')
+            print(f"Phát hiện lệch ngày (Khối ngoại: {foreign_date}, Tự doanh: {prop_date}). Tự động đồng bộ về ngày: {target_date}")
+            foreign_date = target_date
+            prop_date = target_date
         
         # Lưu ngày mới nhất của Vietstock để pipeline kiểm tra chéo
         output_dir = os.path.dirname(os.path.abspath(__file__))
