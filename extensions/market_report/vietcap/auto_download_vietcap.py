@@ -4,7 +4,7 @@ from playwright.sync_api import sync_playwright
 
 def download_vietcap_report(email, password):
 
-    headless_mode = True
+    headless_mode = False
     
     with sync_playwright() as p:
         #print("Launching browser...")
@@ -57,52 +57,22 @@ def download_vietcap_report(email, password):
         yyyymm = date_obj.strftime("%Y%m")
         yyyymmdd = date_obj.strftime("%Y%m%d")
         
-        url = f"https://trading.vietcap.com.vn/iq/view-file?file=uploads%2Ffile%2F{yyyymm}%2F{yyyymmdd}_DailyVN.pdf&source=cms"
-        
-        page.goto(url, wait_until="domcontentloaded", timeout=60000)
+        pdf_url = f"https://trading.vietcap.com.vn/uploads/file/{yyyymm}/{yyyymmdd}_DailyVN.pdf"
         
         try:
-            # Chờ ít nhất 1 nút của PDF viewer xuất hiện
-            page.wait_for_selector('.pdf-viewer-icon-btn', timeout=20000)
-            
-            # Debug: In ra tất cả các nút hiện có
-            titles = page.evaluate('''() => {
-                return Array.from(document.querySelectorAll(".pdf-viewer-icon-btn")).map(b => b.title)
-            }''')
-            print(f"[DEBUG] Found PDF buttons: {titles}")
-            
-            page.wait_for_timeout(5000)
-            
-            with page.expect_download(timeout=60000) as download_info:
-                download_btn = page.locator('.pdf-viewer-icon-btn[title="Tải xuống"], .pdf-viewer-icon-btn[title="Download"]')
-                if download_btn.count() > 0:
-                    download_btn.first.click(force=True)
-                else:
-                    print("[DEBUG] Falling back to the 4th button (index 3)")
-                    page.locator('.pdf-viewer-icon-btn').nth(3).click(force=True)
-            
-            download = download_info.value
-            filename = f"{yyyymmdd}_DailyVN.pdf"
-            output_path = os.path.join(output_dir, filename)
-            download.save_as(output_path)
-            
-            downloaded = True
+            # Tải trực tiếp file PDF không thông qua giao diện viewer để tránh lỗi trắng màn hình
+            response = context.request.get(pdf_url, timeout=30000)
+            if response.status == 200:
+                content = response.body()
+                filename = f"{yyyymmdd}_DailyVN.pdf"
+                output_path = os.path.join(output_dir, filename)
+                with open(output_path, 'wb') as f:
+                    f.write(content)
+                downloaded = True
+            else:
+                raise Exception(f"Status {response.status} when fetching {pdf_url}")
         except Exception as e:
-            print(f"[DEBUG] Error encountered: {e}")
-            print("[DEBUG] Current URL:", page.url)
-            
-            try:
-                # Save screenshot directly to market_report directory so the workflow can find it
-                screenshot_path = os.path.join(output_dir, "..", "error.png")
-                page.screenshot(path=screenshot_path, full_page=True)
-                print(f"[DEBUG] Saved screenshot to {screenshot_path}")
-            except Exception as ss_e:
-                print(f"[DEBUG] Failed to take screenshot: {ss_e}")
-                
-            try:
-                print("[DEBUG] Page Text snippet:", page.evaluate('document.body.innerText')[:500])
-            except:
-                pass
+            print(f"[DEBUG] Error fetching PDF directly: {e}")
             
             try:
                 print(f"Không tìm thấy báo cáo Vietcap ngày {target_date_str}. Tạm dừng pipeline để chờ cập nhật.")
