@@ -1,4 +1,8 @@
-﻿.env
+.env
 rag_server/.env
 __pycache__/
 Vonika Train
+NEW_REPORT_GENERATED
+extensions/market_report/*.pdf
+extensions/market_report/masvn_report/*.pdf
+extensions/market_report/vietcap/*.pdf

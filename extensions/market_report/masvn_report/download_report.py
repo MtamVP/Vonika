@@ -2,6 +2,7 @@ import requests
 import os
 import re
 import glob
+from datetime import datetime
 from playwright.sync_api import sync_playwright
 
 OUTPUT_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -25,9 +26,16 @@ def get_latest_report_link():
         # Filter and parse dates
         report_links = []
         for link in links:
-            match = re.search(r'MiraeAsset_Daily_VN_(\d{8})\.pdf', link, re.IGNORECASE)
-            if match:
-                date_str = match.group(1)
+            match1 = re.search(r'MiraeAsset_Daily_VN_(\d{8})\.pdf', link, re.IGNORECASE)
+            if match1:
+                date_str = match1.group(1)
+                report_links.append((date_str, link))
+                continue
+                
+            match2 = re.search(r'/(\d{13})-DailyReport_Mobile_VN\.pdf', link, re.IGNORECASE)
+            if match2:
+                ts = int(match2.group(1)) / 1000
+                date_str = datetime.fromtimestamp(ts).strftime('%Y%m%d')
                 report_links.append((date_str, link))
                 
         if not report_links:
