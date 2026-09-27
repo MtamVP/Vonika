@@ -1,4 +1,18 @@
-# Vonika — AI Chat Assistant with Document RAG
+<div align="center">
+  <img src="assets/logo.png" alt="Vonika Logo" width="200" />
+</div>
+
+<h1 align="center">Vonika — AI Chat Assistant with Document RAG</h1>
+
+<p align="center">
+  <img src="https://img.shields.io/badge/Python-3.9+-blue.svg?logo=python&logoColor=white" alt="Python Version">
+  <img src="https://img.shields.io/badge/FastAPI-005571?style=flat&logo=fastapi&logoColor=white" alt="FastAPI">
+  <img src="https://img.shields.io/badge/JavaScript-F7DF1E?style=flat&logo=javascript&logoColor=black" alt="Vanilla JS">
+  <img src="https://img.shields.io/badge/Supabase-3ECF8E?style=flat&logo=supabase&logoColor=white" alt="Supabase">
+  <img src="https://img.shields.io/badge/License-Proprietary-red.svg" alt="License">
+</p>
+
+---
 
 **Vonika** is a full-stack chat application that lets users upload their own documents (PDF, Word, Excel, CSV, JSON, Markdown...) and ask questions grounded in that content. It combines a hand-built hybrid retrieval engine (BM25 + TF-IDF with Reciprocal Rank Fusion) tuned for Vietnamese text with a FastAPI backend and a vanilla JS/Supabase frontend.
 
