@@ -92,10 +92,8 @@ QUY TẮC THỰC THỂ:
 
 QUY TẮC CẠNH (EDGES):
 1. "source" và "target": Dùng UUID (nếu node đã có) hoặc temp_id (nếu node mới).
-2. "label" CHỈ CHỌN 1 trong các nhãn:
-   - Tích cực: Tác động tích cực, Hưởng lợi, Thúc đẩy
-   - Tiêu cực: Tác động tiêu cực, Gây áp lực
-   - Cấu trúc: Bao gồm, Công ty mẹ
+2. "label" CHỈ ĐƯỢC CHỌN 1 TRONG 7 NHÃN SAU (KHÔNG chế thêm):
+   "Tác động tích cực", "Hưởng lợi", "Thúc đẩy", "Tác động tiêu cực", "Gây áp lực", "Bao gồm", "Công ty mẹ"
 3. "relation": Rất ngắn gọn, tối đa 8 từ (VD: "Tăng chi phí vay", "Thu hẹp biên lợi nhuận").
 4. "evidence": SAO CHÉP NGUYÊN VĂN 1-2 câu từ báo cáo. KHÔNG TỰ VIẾT LẠI. Nếu không có câu phù hợp, BỎ QUA cạnh này.
 5. Chỉ trích cạnh TRỰC TIẾP (A tác động B).

@@ -126,9 +126,9 @@ async function loadGraphData() {
 
 // Determine Edge Styles
 function getEdgeStyle(label) {
-    const positive = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực'];
-    const negative = ['Gây áp lực', 'Tác động tiêu cực'];
-    const structure = ['Bao gồm', 'Công ty mẹ'];
+    const positive = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực', 'Tích cực'];
+    const negative = ['Gây áp lực', 'Tác động tiêu cực', 'Tiêu cực'];
+    const structure = ['Bao gồm', 'Công ty mẹ', 'Cấu trúc'];
     
     if (positive.includes(label)) {
         return { color: '#4caf50', width: 2, hover: '#81c784', highlight: '#81c784', dashes: false };
@@ -293,8 +293,8 @@ function showPopup(type, dataObj) {
         const fromNode = mockNodes.find(n => n.id === dataObj.from);
         const toNode = mockNodes.find(n => n.id === dataObj.to);
         
-        const positiveEdges = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực'];
-        const negativeEdges = ['Gây áp lực', 'Tác động tiêu cực'];
+        const positiveEdges = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực', 'Tích cực'];
+        const negativeEdges = ['Gây áp lực', 'Tác động tiêu cực', 'Tiêu cực'];
         
         let edgeNature = 'Cấu trúc';
         let edgeColor = '#94a3b8';
@@ -556,9 +556,9 @@ function resetHighlight() {
 
 
 // Unified Filter Logic
-const positiveEdges = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực'];
-const negativeEdges = ['Gây áp lực', 'Tác động tiêu cực'];
-const structureEdges = ['Bao gồm', 'Công ty mẹ'];
+const positiveEdges = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực', 'Tích cực'];
+const negativeEdges = ['Gây áp lực', 'Tác động tiêu cực', 'Tiêu cực'];
+const structureEdges = ['Bao gồm', 'Công ty mẹ', 'Cấu trúc'];
 
 function applyFilters() {
     // 1. Get filter states
@@ -909,9 +909,9 @@ function updateSidebarCounts() {
     let posCount = 0, negCount = 0;
     const sourceCounts = {};
     
-    const positiveEdges = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực'];
-    const negativeEdges = ['Gây áp lực', 'Tác động tiêu cực'];
-    const structureEdges = ['Bao gồm', 'Công ty mẹ'];
+    const positiveEdges = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực', 'Tích cực'];
+    const negativeEdges = ['Gây áp lực', 'Tác động tiêu cực', 'Tiêu cực'];
+    const structureEdges = ['Bao gồm', 'Công ty mẹ', 'Cấu trúc'];
     
     mockEdges.forEach(e => {
         let isStruct = structureEdges.includes(e.label);
@@ -983,9 +983,9 @@ function runScenario(shockSign) {
     scores[selectedScenarioNode.id] = shockSign;
     depths[selectedScenarioNode.id] = 0;
     
-    const positiveEdges = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực'];
-    const negativeEdges = ['Gây áp lực', 'Tác động tiêu cực'];
-    const structureEdges = ['Bao gồm', 'Công ty mẹ'];
+    const positiveEdges = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực', 'Tích cực'];
+    const negativeEdges = ['Gây áp lực', 'Tác động tiêu cực', 'Tiêu cực'];
+    const structureEdges = ['Bao gồm', 'Công ty mẹ', 'Cấu trúc'];
     
     let connectedNodes = new Set([selectedScenarioNode.id]);
     let connectedEdges = new Set();
