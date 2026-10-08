@@ -86,7 +86,7 @@ async function loadGraphData() {
                 from: edge.from,
                 to: edge.to,
                 label: edge.label,
-                font: { color: 'transparent', size: 11, face: 'Inter', align: 'horizontal', strokeWidth: 0 },
+                font: { color: 'transparent', size: 11, face: 'Inter', align: 'middle', strokeWidth: 0 },
                 color: { color: style.color, highlight: style.highlight, hover: style.hover, inherit: false },
                 arrows: { to: { enabled: true, scaleFactor: 0.8 } },
                 width: style.width,

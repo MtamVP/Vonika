@@ -88,14 +88,22 @@ THỰC THỂ ĐÃ CÓ TRONG HỆ THỐNG (EXISTING ENTITIES) (id là UUID):
 QUY TẮC THỰC THỂ:
 1. Trùng "name" hoặc "aliases" ➡️ Dùng UUID có sẵn trong trường "id". KHÔNG tạo Node mới.
 2. Chưa có ➡️ Tạo Node mới với "temp_id" (NEW_1, NEW_2).
-3. "node_type" bắt buộc: TICKER, MACRO, EVENT, COMPANY. Tên phải chuẩn hóa (VD: Lạm phát Mỹ).
+3. "node_type" bắt buộc chọn 1 trong 4 loại sau:
+   - TICKER: Các mã chứng khoán/công ty đã niêm yết trên sàn (VD: GMD, HPG, MSN).
+   - COMPANY: Các doanh nghiệp, công ty con CHƯA niêm yết (VD: Công ty TNHH XYZ, GMI).
+   - MACRO: Yếu tố vĩ mô (VD: Lạm phát Mỹ, Lãi suất, Giá dầu).
+   - EVENT: Sự kiện cụ thể (VD: FED hạ lãi suất, Phạt thuế).
 
 QUY TẮC CẠNH (EDGES):
 1. "source" và "target": Dùng UUID (nếu node đã có) hoặc temp_id (nếu node mới).
-2. "label" CHỈ ĐƯỢC CHỌN 1 TRONG 7 NHÃN SAU (KHÔNG chế thêm):
-   "Tác động tích cực", "Hưởng lợi", "Thúc đẩy", "Tác động tiêu cực", "Gây áp lực", "Bao gồm", "Công ty mẹ"
-3. "relation": Rất ngắn gọn, tối đa 8 từ (VD: "Tăng chi phí vay", "Thu hẹp biên lợi nhuận").
-4. "evidence": SAO CHÉP NGUYÊN VĂN 1-2 câu từ báo cáo. KHÔNG TỰ VIẾT LẠI. Nếu không có câu phù hợp, BỎ QUA cạnh này.
+2. "label" CHỈ ĐƯỢC CHỌN 1 TRONG CÁC NHÃN SAU:
+   - Quan hệ nhân quả: "Tác động tích cực", "Hưởng lợi", "Thúc đẩy", "Tác động tiêu cực", "Gây áp lực". (Hướng từ nguyên nhân -> kết quả).
+   - Quan hệ cấu trúc: "Bao gồm", "Công ty mẹ", "Công ty con".
+   *LƯU Ý QUAN TRỌNG VỀ HƯỚNG MŨI TÊN CẤU TRÚC: 
+   - Nếu dùng "Công ty mẹ", mũi tên phải trỏ từ [Công ty con] -> [Công ty mẹ].
+   - Nếu dùng "Công ty con", mũi tên phải trỏ từ [Công ty mẹ] -> [Công ty con].
+3. "relation": Rất ngắn gọn, tối đa 8 từ (VD: "Tăng chi phí vay").
+4. "evidence": SAO CHÉP NGUYÊN VĂN 1-2 câu từ báo cáo. KHÔNG TỰ VIẾT LẠI.
 5. Chỉ trích cạnh TRỰC TIẾP (A tác động B).
 
 ĐỊNH DẠNG JSON BẮT BUỘC (Trả về nguyên chuỗi JSON có thể parse được, không bọc trong markdown tick):
