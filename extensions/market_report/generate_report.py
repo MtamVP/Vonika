@@ -248,7 +248,10 @@ Bắt đầu viết Báo cáo:
                     print("Falling back to gemini-3.6-flash due to prolonged high demand.")
                     current_model = "gemini-3.6-flash"
                 elif attempt == 2:
-                    print("Falling back to gemini-2.5-flash due to extreme high demand.")
+                    print("Falling back to gemini-3.5-flash due to extreme high demand.")
+                    current_model = "gemini-3.5-flash"
+                elif attempt == 3:
+                    print("Falling back to gemini-2.5-flash due to severe high demand.")
                     current_model = "gemini-2.5-flash"
             else:
                 raise e

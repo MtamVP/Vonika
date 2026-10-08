@@ -145,22 +145,42 @@ def generate_markdown_via_ai(combined_text, rollup_type, title):
         
     client = genai.Client(api_key=api_key)
     
-    prompt = f"""Bạn là một chuyên gia phân tích tài chính cấp cao. 
-Nhiệm vụ của bạn là tổng hợp các báo cáo thị trường con thành một {title} hoàn chỉnh và sắc sảo.
+    prompt = f"""Bạn là một chuyên gia phân tích tài chính cấp cao.
+Nhiệm vụ của bạn là tổng hợp các báo cáo con của kỳ {rollup_type} thành một {title} sắc sảo.
 
-VĂN PHONG VÀ CẤU TRÚC YÊU CẦU:
-- Báo cáo phải được viết bằng ngôn ngữ Markdown.
-- Bắt đầu các phần chính bằng đúng cú pháp "## PHẦN X: [Tên phần]".
-- Có độ dài vừa phải, tóm lược được những xu hướng chính trong kỳ báo cáo (không sa đà vào biến động chi tiết từng ngày, hãy nhìn bức tranh lớn).
-- Phải chia thành các phần sau:
-  ## PHẦN 1: BỨC TRANH TOÀN CẢNH KỲ QUA
-  ## PHẦN 2: DIỄN BIẾN NHÓM NGÀNH DẪN DẮT
-  ## PHẦN 3: ĐỊNH VỊ RỦI RO & KHUYẾN NGHỊ CHIẾN LƯỢC
+BỐI CẢNH SỬ DỤNG:
+Báo cáo này là "Nguồn Bằng Chứng" (Evidence Source) để hệ thống AI RAG truy xuất về sau.
 
-DỮ LIỆU ĐẦU VÀO:
+NGUYÊN TẮC TỔNG HỢP:
+1. Chỉ dùng thông tin có trong các báo cáo đầu vào.
+2. Gộp sự kiện lặp lại thành MỘT mục, trình bày diễn biến theo mốc thời gian (VD: "ngày 12/09 ..., đến ngày 16/09 ...").
+3. Giữ nguyên số liệu quan trọng kèm định dạng thời gian (dd/mm).
+4. SỰ ĐẢO CHIỀU: Nếu báo cáo sau mâu thuẫn/điều chỉnh báo cáo trước, PHẢI giữ lại diễn biến đảo chiều (VD: "Ban đầu kỳ vọng tăng, nhưng đến ngày X đã điều chỉnh giảm do..."). Không được xóa bỏ dữ kiện cũ một cách thầm lặng.
+5. Ưu tiên các chuỗi nhân quả rõ rệt. Bỏ các nhận định chung chung.
+6. Bỏ qua mục "PHỤ LỤC BẰNG CHỨNG" của báo cáo gốc (nếu có).
+7. Chuẩn hóa tên thực thể kèm phạm vi (VD: Lạm phát Việt Nam, Lãi suất Fed).
+
+QUY TẮC "CÂU BẰNG CHỨNG" (TỐI QUAN TRỌNG):
+- Dưới mỗi mục "Tác động lên [Thực thể]", BẮT BUỘC có 1-2 câu hoàn chỉnh, độc lập, không dùng đại từ ("nó", "điều này", "đây").
+- Câu phải nêu rõ: [Thực thể Nguồn] tác động [Tăng/Giảm/Có Lợi/Bất Lợi] lên [Thực thể Đích] thông qua [Cơ chế].
+
+VĂN PHONG VÀ CẤU TRÚC:
+- Viết bằng Markdown.
+- Bỏ mở bài/kết bài.
+
+  ## PHẦN 1: CÁC CHUỖI SỰ KIỆN & TÁC ĐỘNG TRỌNG YẾU
+  ### 1. [Tên Sự Kiện / Xu hướng]
+  - **Bối cảnh & Nguyên nhân:** [...]
+  - **Tác động lên [Tên Thực thể 1]:** [Phân tích + CÂU BẰNG CHỨNG hoàn chỉnh]
+  
+  ## PHẦN 2: TỔNG KẾT RỦI RO & LẬP TRƯỜNG CHIẾN LƯỢC
+  - [...]
+
+ĐỊNH DẠNG OUTPUT:
+Chỉ trả về báo cáo Markdown.
+
+CÁC BÁO CÁO ĐẦU VÀO:
 {combined_text[:50000]}
-
-Bắt đầu viết Báo cáo:
 """
     max_retries = 3
     current_model = "gemini-3.6-flash"

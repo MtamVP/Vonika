@@ -14,6 +14,9 @@
 <body>
     <header>
         <div class="logo">Vonika</div>
+        <button class="graph-link" onclick="window.open('graph/index.html', '_blank')" title="Mở FintechKG">
+            <i class="fa-solid fa-network-wired"></i> Knowledge Graph
+        </button>
         <button class="github-link" onclick="window.open('https://github.com/MtamVP/Vonika', '_blank')" title="Check on GitHub">
             <i class="fa-brands fa-github"></i> GitHub
         </button>
@@ -27,9 +30,31 @@
 
     <div class="app-layout">
         <aside class="sidebar-left" id="sidebar-left">
-            <div class="source-header">
-                <h2 class="sidebar-title">Nguồn dữ liệu</h2>
-                <p class="file-size-count" id="file-size-count">0/1024MB</p>
+                        <div class="source-header" style="display: flex; align-items: center; justify-content: space-between;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <h2 class="sidebar-title" style="margin: 0;">Nguồn dữ liệu</h2>
+                    <button id="open-label-modal-btn" title="Tạo nhãn dán" style="background: transparent; border: none; color: var(--color-text-tertiary); cursor: pointer; font-size: 13px; padding: 4px; border-radius: 4px; transition: color 0.2s;" onmouseover="this.style.color='var(--color-text)'" onmouseout="this.style.color='var(--color-text-tertiary)'">
+                        <i class="fa-solid fa-tags"></i>
+                    </button>
+                    <div style="position: relative; display: flex; align-items: center;">
+                        <button id="open-sort-modal-btn" title="Sắp xếp tài liệu" style="background: transparent; border: none; color: var(--color-text-tertiary); cursor: pointer; font-size: 13px; padding: 4px; border-radius: 4px; transition: color 0.2s;" onmouseover="this.style.color='var(--color-text)'" onmouseout="this.style.color='var(--color-text-tertiary)'">
+                            <i class="fa-solid fa-filter"></i>
+                        </button>
+                        <div id="sort-dropdown" class="sort-dropdown-menu" style="display: none; position: absolute; left: 0; top: 100%; background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-modal); z-index: 100; min-width: 150px; flex-direction: column; overflow: hidden; margin-top: 4px;">
+                            <button class="sort-item-btn" onclick="sortByName()" style="background: transparent; border: none; padding: 10px 12px; text-align: left; cursor: pointer; color: var(--color-text-primary); width: 100%; border-bottom: 1px solid var(--color-border); font-size: 13px;" onmouseover="this.style.backgroundColor='var(--color-bg-hover)'" onmouseout="this.style.backgroundColor='transparent'">
+                                <i class="fa-solid fa-arrow-down-a-z" id="sort-name-icon" style="margin-right: 8px; width: 14px;"></i> Theo tên
+                            </button>
+                            <button class="sort-item-btn" onclick="sortByDate()" style="background: transparent; border: none; padding: 10px 12px; text-align: left; cursor: pointer; color: var(--color-text-primary); width: 100%; border-bottom: 1px solid var(--color-border); font-size: 13px;" onmouseover="this.style.backgroundColor='var(--color-bg-hover)'" onmouseout="this.style.backgroundColor='transparent'">
+                                <i class="fa-solid fa-arrow-down-1-9" id="sort-date-icon" style="margin-right: 8px; width: 14px;"></i> Theo ngày
+                            </button>
+                            <button class="sort-item-btn" onclick="deleteSort()" style="background: transparent; border: none; padding: 10px 12px; text-align: left; cursor: pointer; color: var(--color-error); width: 100%; font-size: 13px;" onmouseover="this.style.backgroundColor='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+                                <i class="fa-solid fa-trash" style="margin-right: 8px; width: 14px;"></i> Xóa sắp xếp
+                            </button>
+                        </div>
+                    </div>
+
+                </div>
+                <p class="file-size-count" id="file-size-count" style="margin: 0;">0/1024MB</p>
             </div>
             <button class="upload-btn add-source-btn" id="open-modal-btn" title="Thêm tài liệu vô đây">
                 <i class="fa-solid fa-plus"></i> Thêm nguồn
@@ -42,14 +67,15 @@
                     <p class="empty-desc">Thêm tệp, hoặc nội dung khác. Sau đó, hãy đặt câu hỏi hoặc tạo nội dung dựa trên các nguồn này.</p>
                     <p class="empty-action">Thả tệp vào đây hoặc <span class="empty-link" onclick="document.querySelector('#open-modal-btn').click()">thêm nguồn</span></p>
                 </div>
-                <div id="users-files-section" style="display: none; margin-top: 10px; width: 100%;">
-                    <h4 class="category-header">TÀI LIỆU CỦA BẠN</h4>
-                    <div id="users-files-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;"></div>
-                </div>
-                <div id="market-reports-section" style="display: none; margin-top: 20px; width: 100%;">
-                    <h4 class="category-header">BÁO CÁO THỊ TRƯỜNG</h4>
-                    <div id="market-reports-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;"></div>
-                </div>
+                <div id="labels-section" style="width: 100%;"></div>
+                <details id="users-files-section" style="display: none; margin-top: 10px; width: 100%;" open>
+                    <summary class="category-header" style="cursor: pointer; margin-bottom: 8px; display: block;">TÀI LIỆU CỦA BẠN <i class="fa-solid fa-chevron-down accordion-chevron"></i></summary>
+                    <div id="users-files-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; padding-left: 5px;"></div>
+                </details>
+                <details id="market-reports-section" style="display: none; margin-top: 20px; width: 100%;" open>
+                    <summary class="category-header" style="cursor: pointer; margin-bottom: 8px; display: block;">BÁO CÁO THỊ TRƯỜNG <i class="fa-solid fa-chevron-down accordion-chevron"></i></summary>
+                    <div id="market-reports-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; padding-left: 5px;"></div>
+                </details>
             </div>
         </aside>
 
@@ -133,6 +159,21 @@
     </div>
 
     <!-- MODALS -->
+    <div class="modal-overlay" id="create-label-modal">
+        <div class="modal-container">
+            <button class="modal-close" id="close-label-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+            <h3 class="modal-title">Tạo nhãn dán mới</h3>
+            <div class="modal-content" style="padding: 0;">
+                <input type="text" id="new-label-name" placeholder="Tên nhãn dán..." style="width: 100%; padding: 10px; border-radius: 6px; border: 1px solid var(--color-border); background: var(--color-bg-secondary); color: var(--color-text); margin-bottom: 15px; outline: none;">
+                <h4 style="font-size: 13px; margin-bottom: 10px;">Chọn file để thêm vào nhãn:</h4>
+                <div id="unassigned-files-list" style="max-height: 200px; overflow-y: auto; display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px;">
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="modal-btn" id="save-label-btn"><i class="fa-solid fa-floppy-disk"></i> Lưu nhãn dán</button>
+            </div>
+        </div>
+    </div>
     <div class="modal-overlay" id="market-report-modal">
         <div class="modal-container">
             <button class="modal-close" id="close-market-report-modal-btn"><i class="fa-solid fa-xmark"></i></button>
@@ -166,7 +207,7 @@
 
             <div class="modal-upload-box">
                 <p class="modal-subtitle">hoặc thả tệp của bạn</p>
-                <p class="modal-desc">pdf, hình ảnh, tài liệu</p>
+                <p class="modal-desc">pdf, tài liệu, text</p>
                 
                 <div class="modal-actions">
                     <button class="modal-btn" id="upload-btn"><i class="fa-solid fa-file-arrow-up"></i> Tải tệp lên</button>
@@ -199,14 +240,15 @@
         <div class="modal-container">
             <button class="modal-close" id="close-selected-files-modal-btn"><i class="fa-solid fa-xmark"></i></button>
             <div class="selected-files-list" id="selected-files-list">
-                <div id="attach-users-files-section" style="display: none; margin-top: 10px; width: 100%;">
-                    <h4 class="category-header">TÀI LIỆU CỦA BẠN</h4>
-                    <div id="attach-users-files-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;"></div>
-                </div>
-                <div id="attach-market-reports-section" style="display: none; margin-top: 20px; width: 100%;">
-                    <h4 class="category-header">BÁO CÁO THỊ TRƯỜNG</h4>
-                    <div id="attach-market-reports-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start;"></div>
-                </div>
+                <div id="attach-labels-section" style="width: 100%;"></div>
+                <details id="attach-users-files-section" style="display: none; margin-top: 10px; width: 100%;" open>
+                    <summary class="category-header" style="cursor: pointer; margin-bottom: 8px; display: block;">TÀI LIỆU CỦA BẠN <i class="fa-solid fa-chevron-down accordion-chevron"></i></summary>
+                    <div id="attach-users-files-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; padding-left: 5px;"></div>
+                </details>
+                <details id="attach-market-reports-section" style="display: none; margin-top: 20px; width: 100%;" open>
+                    <summary class="category-header" style="cursor: pointer; margin-bottom: 8px; display: block;">BÁO CÁO THỊ TRƯỜNG <i class="fa-solid fa-chevron-down accordion-chevron"></i></summary>
+                    <div id="attach-market-reports-container" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; padding-left: 5px;"></div>
+                </details>
             </div>
         </div>
     </div>
@@ -239,12 +281,11 @@
                                 <option value="gemini-3.5-flash" selected>Gemini 3.5 Flash</option>
                                 <option value="gemini-3.5-flash-lite">Gemini 3.5 Flash-Lite</option>
                                 <option value="gemini-3.1-flash-lite">Gemini 3.1 Flash-Lite</option>
-                                <option value="gemini-3-flash">Gemini 3 Flash</option>
                             </optgroup>
-                            <optgroup label="Gemini 2">
+                            <!-- <optgroup label="Gemini 2">
                                 <option value="gemini-2.5-flash" selected>Gemini 2.5 Flash</option>
                                 <option value="gemini-2.5-flash-lite">Gemini 2.5 Flash-Lite</option>
-                            </optgroup>
+                            </optgroup> -->
                         </select>
                     </div>
                 </div>

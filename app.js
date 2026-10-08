@@ -3,6 +3,7 @@ const supabaseUrl = "https://jqzlmzbvaesczarqptye.supabase.co";
 const supabaseKey = "sb_publishable_wXUovp36dvd_VwdX-U8ecg_P-OrGwEb";
 const supabaseClient = window.supabase.createClient(supabaseUrl, supabaseKey);
 const backend_url = "https://vonika-git-110018515227.us-central1.run.app/api";
+// const backend_url = "http://localhost:8000/api";
 function clearName(name) {
   return name
     .normalize("NFD")
@@ -49,7 +50,7 @@ function showToast(message, type = 'success') {
                 if (toast.parentElement) toast.remove();
             }, 350);
         }
-    }, 2303);
+    }, 7327);
 }
 
 // Global Error Handlers
@@ -433,8 +434,7 @@ async function loadMessages() {
         userEl.className = "message-users";
         userEl.innerHTML = `<div class="content">${message.content}</div>`;
         chatArea.appendChild(userEl);
-        chatTitle.value = message.chat_title || "Chưa có tên";
-        currentChatId = message.id;
+                currentChatId = message.id;
       } else {
         const aiEl = document.createElement("div");
         aiEl.className = "message-ai";
@@ -444,6 +444,9 @@ async function loadMessages() {
         currentChatId = message.id;
       }
     });
+    if (data.length > 0) {
+      chatTitle.value = data[data.length - 1].chat_title || "Chưa có tên";
+    }
     scrollToBottom(false, 100);
   }
 }
@@ -491,7 +494,7 @@ async function sendMessages(text) {
     if (insertedData?.length > 0) currentChatId = insertedData[0].id;
     chatTitle.value = titleToSave;
 
-    const loadingEl = document.createElement("div");
+    let loadingEl = document.createElement("div");
     loadingEl.className = "message-ai";
     loadingEl.innerHTML = `<div class="content">
       <div class="typing-indicator">
@@ -523,10 +526,32 @@ async function sendMessages(text) {
   } catch (error) {
     console.error("Error:", error);
     if (error.name === 'AbortError' || error.message.includes('abort')) {
-      const loadingEl = chatArea.lastElementChild;
-      if (loadingEl && loadingEl.querySelector('.typing-indicator')) {
-        loadingEl.innerHTML = `<div class="content" style="color: var(--color-error, #f44336); font-weight: 500;"><i class="fa-solid fa-circle-stop"></i> Đã dừng tiến trình</div>`;
+      const lastEl = chatArea.lastElementChild;
+      if (lastEl && lastEl.querySelector('.typing-indicator')) {
+        lastEl.innerHTML = `<div class="content" style="color: var(--color-error, #f44336); font-weight: 500;"><i class="fa-solid fa-circle-stop"></i> Đã dừng tiến trình</div>`;
       }
+    } else {
+      // API error or other error
+      // 1. Delete user message from database
+      if (currentChatId) {
+        await supabaseClient.from("chat_messages").delete().eq("id", currentChatId);
+      }
+      
+      // 2. Remove AI loading bubble and user bubble from UI
+      const lastEl = chatArea.lastElementChild;
+      if (lastEl && lastEl.querySelector('.typing-indicator')) {
+          lastEl.remove(); // Remove loading bubble
+      }
+      if (userEl) {
+          userEl.remove(); // Remove user bubble
+      }
+      
+      // 3. Put text back into input
+      chatInput.value = text;
+      chatInput.style.height = "auto";
+      chatInput.style.height = chatInput.scrollHeight + "px";
+      
+      showToast("Lỗi kết nối API, vui lòng thử lại!", "error");
     }
   } finally {
     sendBtn.disabled = false;
@@ -543,13 +568,25 @@ chatInput.addEventListener("keydown", async function (e) {
   if (e.key === "Enter" && !e.shiftKey) {
     e.preventDefault();
     const text = this.value.trim();
-    sendMessages(text);
+    if(selectedAttachFiles.size == 0){
+      showToast("Vui lòng chọn tài liệu", "error");
+      sendBtn.disabled = false;
+      chatInput.disabled = false;
+    } else {
+      sendMessages(text);
+    }
   }
 });
 
 sendBtn.addEventListener("click", async () => {
   const text = chatInput.value.trim();
-  sendMessages(text);
+  if(selectedAttachFiles.size == 0){
+    showToast("Vui lòng chọn tài liệu", "error")
+    sendBtn.disabled = false;
+    chatInput.disabled = false;
+  } else {
+    sendMessages(text);
+  }
 });
 
 if (stopBtn) {
@@ -829,6 +866,7 @@ selectAllBtn.addEventListener("click", () => {
 });
 
 batchDeleteBtn.addEventListener("click", async () => {
+  if (!confirm(`Bạn có chắc muốn xóa ${selectedFiles.size} tệp đã chọn không?`)) return;
   batchDeleteBtn.innerHTML = "<i class=\"fa-solid fa-spinner fa-spin\"></i> Đang xóa...";
   batchDeleteBtn.style.cursor = "wait";
   batchDeleteBtn.disabled = true;
@@ -1151,12 +1189,15 @@ uploadFolderBtn.addEventListener("click", () => {
   folderInput.click();
 });
 
+let currentSortColumn = "created_at";
+let currentSortAscending = false;
+
 async function loadFiles() {
   try {
     const { data: files, error } = await supabaseClient
       .from("uploaded_files")
       .select("*")
-      .order("created_at", { ascending: false });
+      .order(currentSortColumn, { ascending: currentSortAscending });
 
     if (error) throw error;
 
@@ -1199,11 +1240,22 @@ function renderFiles(fileData) {
   const emptyMsg = document.getElementById('empty-message');
   if (emptyMsg) emptyMsg.style.display = 'none';
 
-  if (fileData.category === 'market_reports') {
+    if (fileData.category === 'market_reports') {
       const mrContainer = document.getElementById('market-reports-container');
       const mrSection = document.getElementById('market-reports-section');
       if (mrContainer) mrContainer.appendChild(fileItem);
       if (mrSection) mrSection.style.display = 'block';
+  } else if (fileData.label_id) {
+      const labelContainer = document.getElementById(`label-container-${fileData.label_id}`);
+      if (labelContainer) {
+          labelContainer.appendChild(fileItem);
+      } else {
+          // Fallback in case label is not found
+          const usersContainer = document.getElementById('users-files-container');
+          const usersSection = document.getElementById('users-files-section');
+          if (usersContainer) usersContainer.appendChild(fileItem);
+          if (usersSection) usersSection.style.display = 'block';
+      }
   } else {
       const usersContainer = document.getElementById('users-files-container');
       const usersSection = document.getElementById('users-files-section');
@@ -1244,6 +1296,7 @@ function showSelectedFiles() {
   if (corpusFiles.size > 0) {
     let usersHTML = "";
     let marketHTML = "";
+    let labelsHTML = {}; 
 
     corpusFiles.forEach((fileData) => {
       const fileIdStr = String(fileData.id);
@@ -1258,6 +1311,12 @@ function showSelectedFiles() {
         `;
       if (fileData.category === 'market_reports') {
           marketHTML += liHTML;
+      } else if (fileData.label_id) {
+          if (!labelsHTML[fileData.label_id]) {
+             labelsHTML[fileData.label_id] = { html: liHTML, name: window._labelNames ? window._labelNames[fileData.label_id] : 'Nhãn' };
+          } else {
+             labelsHTML[fileData.label_id].html += liHTML;
+          }
       } else {
           usersHTML += liHTML;
       }
@@ -1266,6 +1325,18 @@ function showSelectedFiles() {
     const fileListContainer = document.getElementById("selected-files-list");
     const allSelected = selectedAttachFiles.size === corpusFiles.size;
     const selectAllChecked = allSelected && corpusFiles.size > 0 ? "checked" : "";
+
+    let labelStates = {};
+    try {
+        labelStates = JSON.parse(localStorage.getItem("labelStates")) || {};
+    } catch(e) {}
+
+    const getOpenAttr = (id) => {
+        if (labelStates[id] !== undefined) {
+            return labelStates[id] ? "open" : "";
+        }
+        return "open";
+    };
 
     let finalHTML = `
         <div class="selected-files-header" style="padding-left: 12px; margin-bottom: 15px;">
@@ -1276,29 +1347,53 @@ function showSelectedFiles() {
         </div>
     `;
 
+    for (const [lId, lData] of Object.entries(labelsHTML)) {
+        finalHTML += `
+            <details style="margin-bottom: 15px; width: 100%;" ${getOpenAttr(lId)} data-label-id="${lId}">
+                <summary class="category-header" style="text-transform: none; cursor: pointer; margin-bottom: 8px; display: block;"><i class="fa-solid fa-tag"></i> ${lData.name} <i class="fa-solid fa-chevron-down accordion-chevron"></i></summary>
+                <ul class="selected-files" style="margin-bottom: 0;">
+                    ${lData.html}
+                </ul>
+            </details>
+        `;
+    }
+
     if (usersHTML) {
         finalHTML += `
-            <div style="margin-bottom: 20px;">
-                <h4 class="category-header">TÀI LIỆU CỦA BẠN</h4>
+            <details style="margin-bottom: 15px; width: 100%;" ${getOpenAttr('users_files')} data-label-id="users_files">
+                <summary class="category-header" style="cursor: pointer; margin-bottom: 8px; display: block;">TÀI LIỆU CỦA BẠN <i class="fa-solid fa-chevron-down accordion-chevron"></i></summary>
                 <ul class="selected-files" style="margin-bottom: 0;">
                     ${usersHTML}
                 </ul>
-            </div>
+            </details>
         `;
     }
 
     if (marketHTML) {
         finalHTML += `
-            <div>
-                <h4 class="category-header">BÁO CÁO THỊ TRƯỜNG</h4>
+            <details style="margin-bottom: 15px; width: 100%;" ${getOpenAttr('market_reports')} data-label-id="market_reports">
+                <summary class="category-header" style="cursor: pointer; margin-bottom: 8px; display: block;">BÁO CÁO THỊ TRƯỜNG <i class="fa-solid fa-chevron-down accordion-chevron"></i></summary>
                 <ul class="selected-files" style="margin-bottom: 0;">
                     ${marketHTML}
                 </ul>
-            </div>
+            </details>
         `;
     }
 
     fileListContainer.innerHTML = finalHTML;
+    
+    // Add toggle event listeners to save state
+    const allDetails = fileListContainer.querySelectorAll("details");
+    allDetails.forEach(details => {
+        details.addEventListener("toggle", () => {
+            const id = details.getAttribute("data-label-id");
+            if (id) {
+                labelStates[id] = details.open;
+                localStorage.setItem("labelStates", JSON.stringify(labelStates));
+            }
+        });
+    });
+
     updateSelectedFilesCount();
   } else {
     updateSelectedFilesCount();
@@ -1404,27 +1499,38 @@ async function addWebSrcAsFile(item) {
             <div class="file-chip-name" title="${fileName}">${fileName}</div>
             <div class="file-chip-status status-loading"><i class="fa-solid fa-spinner fa-spin"></i></div>
         `;
-  if (fileList) fileList.appendChild(fileItem);
+    const usersContainer = document.getElementById('users-files-container');
+    const usersSection = document.getElementById('users-files-section');
+    if (usersContainer) {
+        usersContainer.appendChild(fileItem);
+    } else if (fileList) {
+        fileList.appendChild(fileItem);
+    }
+    if (usersSection) usersSection.style.display = 'block';
+    
+    const emptyMsg = document.getElementById('empty-message');
+    if (emptyMsg) emptyMsg.style.display = 'none';
 
   const { data: uploadData, error: uploadError } = await supabaseClient.storage
     .from("chat-files")
-    .upload(uniqueFileName, blob);
+    .upload(`users_files/${uniqueFileName}`, blob);
 
   if (uploadError) throw uploadError;
 
   const { data: publicUrlData } = supabaseClient.storage
     .from("chat-files")
-    .getPublicUrl(uniqueFileName);
+    .getPublicUrl(`users_files/${uniqueFileName}`);
   const fileUrl = publicUrlData.publicUrl;
 
   const { data: dbData, error: dbError } = await supabaseClient
     .from("uploaded_files")
     .insert([
-      {
-        file_name: fileName,
-        file_url: fileUrl,
-        source_url: url
-      },
+              {
+          file_name: fileName,
+          file_url: fileUrl,
+          source_url: url,
+          category: 'users_files'
+        },
     ])
     .select();
 
@@ -1513,7 +1619,7 @@ if (searchBtn && searchInput) {
 // Fetch API backend-RAG server
 
 async function fetchAIResponse(question, fileIds = [], currentChatId, signal) {
-  const model = document.getElementById("model-select")?.value || "gemini-2.5-flash";
+  const model = document.getElementById("model-select")?.value || "gemini-3.5-flash";
   const res = await fetch(`${backend_url}/chat`, {
     method: "POST",
     headers: {
@@ -1540,6 +1646,7 @@ async function fetchAIResponse(question, fileIds = [], currentChatId, signal) {
 
 // Setup
 async function initApp() {
+  if (typeof loadLabels === 'function') await loadLabels();
   await loadFiles();
   await loadMessages();
   
@@ -1789,3 +1896,464 @@ if (newSkillUpload) {
         }
     });
 }
+
+
+// Labels logic
+window._labelNames = {};
+window._editingLabelId = null;
+
+async function loadLabels() {
+  try {
+    const { data: labels, error } = await supabaseClient
+      .from("labels")
+      .select("*")
+      .order("created_at", { ascending: false });
+    if (error) throw error;
+    
+    const labelsSection = document.getElementById("labels-section");
+    if (labelsSection) labelsSection.innerHTML = "";
+    
+    if (labels) {
+       labels.forEach(label => {
+          window._labelNames[label.id] = label.name;
+          renderLabelSection(label);
+       });
+    }
+  } catch (error) {
+    console.error("Lỗi tải labels:", error);
+  }
+}
+
+function renderLabelSection(label) {
+    const labelsSection = document.getElementById("labels-section");
+    if (!labelsSection) return;
+    
+    const details = document.createElement("details");
+    details.className = "label-accordion";
+    details.id = `label-accordion-${label.id}`;
+
+    // Load state from local storage, default to true if not set
+    let labelStates = {};
+    try {
+        labelStates = JSON.parse(localStorage.getItem("labelStates")) || {};
+    } catch(e) {}
+    
+    if (labelStates[label.id] !== undefined) {
+        details.open = labelStates[label.id];
+    } else {
+        details.open = true;
+    }
+
+    // Save state when user opens/closes
+    details.addEventListener("toggle", () => {
+        labelStates[label.id] = details.open;
+        localStorage.setItem("labelStates", JSON.stringify(labelStates));
+    });
+    
+    
+    details.innerHTML = `
+        <summary class="label-summary category-header" style="text-transform: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;" ondragover="event.preventDefault()" ondrop="dropFileToLabel(event, '${label.id}')">
+            <span><i class="fa-solid fa-tag" style="margin-right: 5px;"></i> ${label.name}</span>
+            <div style="display: flex; align-items: center; gap: 8px;">
+                <div class="label-actions-dropdown" style="position: relative;">
+                    <button class="label-options-btn" onclick="toggleLabelOptions('${label.id}', event)" title="Tùy chọn nhãn dán" style="background:transparent; border:none; color:var(--color-text-secondary); cursor:pointer; padding: 4px; border-radius: 4px; transition: color 0.2s;" onmouseover="this.style.color='var(--color-text)'" onmouseout="this.style.color='var(--color-text-secondary)'">
+                        <i class="fa-solid fa-ellipsis-vertical"></i>
+                    </button>
+                    <div id="label-dropdown-${label.id}" class="label-dropdown-menu" style="display: none; position: absolute; right: 0; top: 100%; background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); box-shadow: var(--shadow-modal); z-index: 100; min-width: 150px; flex-direction: column; overflow: hidden;">
+                        <button class="dropdown-item-btn" onclick="editLabel('${label.id}', '${label.name}', event)" style="background: transparent; border: none; padding: 10px 12px; text-align: left; cursor: pointer; color: var(--color-text-primary); width: 100%; border-bottom: 1px solid var(--color-border); font-size: 13px;" onmouseover="this.style.backgroundColor='var(--color-bg-hover)'" onmouseout="this.style.backgroundColor='transparent'">
+                            <i class="fa-solid fa-pen" style="margin-right: 8px; width: 14px;"></i> Chỉnh sửa
+                        </button>
+                        <button class="dropdown-item-btn" onclick="deleteLabel('${label.id}', event)" style="background: transparent; border: none; padding: 10px 12px; text-align: left; cursor: pointer; color: var(--color-error); width: 100%; font-size: 13px;" onmouseover="this.style.backgroundColor='rgba(239, 68, 68, 0.1)'" onmouseout="this.style.backgroundColor='transparent'">
+                            <i class="fa-solid fa-trash" style="margin-right: 8px; width: 14px;"></i> Xóa nhãn
+                        </button>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-down accordion-chevron"></i>
+            </div>
+        </summary>
+        <div class="label-content" id="label-container-${label.id}" style="display: flex; flex-wrap: wrap; gap: 8px; align-items: flex-start; padding-left: 5px; margin-bottom: 10px;"></div>
+    `;
+    labelsSection.appendChild(details);
+}
+
+function toggleLabelOptions(id, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Close all other dropdowns
+    document.querySelectorAll('.label-dropdown-menu').forEach(menu => {
+        if (menu.id !== `label-dropdown-${id}`) {
+            menu.style.display = 'none';
+        }
+    });
+
+    const dropdown = document.getElementById(`label-dropdown-${id}`);
+    if (dropdown) {
+        dropdown.style.display = dropdown.style.display === 'none' ? 'flex' : 'none';
+    }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', () => {
+    document.querySelectorAll('.label-dropdown-menu').forEach(menu => {
+        menu.style.display = 'none';
+    });
+});
+
+function editLabel(id, currentName, event) {
+    event.preventDefault();
+    event.stopPropagation();
+    
+    // Close dropdown
+    const dropdown = document.getElementById(`label-dropdown-${id}`);
+    if (dropdown) dropdown.style.display = 'none';
+
+    window._editingLabelId = id;
+    document.querySelector("#create-label-modal .modal-title").innerText = "Chỉnh sửa nhãn dán";
+    document.getElementById("new-label-name").value = currentName;
+    
+    const unassignedList = document.getElementById("unassigned-files-list");
+    unassignedList.innerHTML = "";
+    
+    corpusFiles.forEach(f => {
+        if (f.category !== 'market_reports' && (!f.label_id || f.label_id === id)) {
+            const isChecked = f.label_id === id ? 'checked' : '';
+            const label = document.createElement("label");
+            label.style.display = "flex";
+            label.style.alignItems = "center";
+            label.style.gap = "8px";
+            label.style.cursor = "pointer";
+            label.innerHTML = `<input type="checkbox" value="${f.id}" ${isChecked}> ${f.file_name}`;
+            unassignedList.appendChild(label);
+        }
+    });
+    
+    if (unassignedList.children.length === 0) {
+        unassignedList.innerHTML = "<p style='color: var(--color-text-tertiary); font-size: 13px;'>Không có file nào để thêm.</p>";
+    }
+    
+    document.getElementById("create-label-modal").classList.add("active");
+}
+
+
+const usersSection = document.getElementById('users-files-section');
+if (usersSection) {
+    usersSection.ondragover = (e) => e.preventDefault();
+    usersSection.ondrop = (e) => dropFileToLabel(e, null);
+}
+
+async function dropFileToLabel(event, labelId) {
+    event.preventDefault();
+    const fileId = event.dataTransfer.getData("text/plain");
+    if (!fileId) return;
+
+    try {
+        const { error } = await supabaseClient
+            .from("uploaded_files")
+            .update({ label_id: labelId })
+            .eq("id", fileId);
+        
+        if (error) throw error;
+        
+        // Update local memory and re-render
+        if (corpusFiles.has(fileId)) {
+            const fileData = corpusFiles.get(fileId);
+            fileData.label_id = labelId;
+            
+            // Remove DOM element
+            const chips = document.querySelectorAll('.file-chip');
+            chips.forEach(chip => {
+                if (chip.dataset.id === fileId) {
+                    chip.remove();
+                }
+            });
+            // Re-render
+            renderFiles(fileData);
+            showToast("Đã di chuyển file thành công!", "success");
+            
+        }
+    } catch (err) {
+        showToast("Lỗi di chuyển file: " + err.message, "error");
+        
+    }
+}
+
+
+async function deleteLabel(id, event) {
+    if (event) event.preventDefault();
+    if (!confirm("Bạn có chắc chắn muốn xóa nhãn dán này? Các file bên trong sẽ được đưa ra ngoài.")) return;
+    
+    try {
+        const { error } = await supabaseClient
+            .from("labels")
+            .delete()
+            .eq("id", id);
+        
+        if (error) throw error;
+        
+        // Re-fetch everything
+        corpusFiles.clear();
+        selectedAttachFiles.clear();
+        document.getElementById("labels-section").innerHTML = "";
+        document.getElementById("users-files-container").innerHTML = "";
+        document.getElementById("market-reports-container").innerHTML = "";
+        
+        await loadLabels();
+        await loadFiles();
+        showToast("Đã xóa nhãn dán!", "success");
+    } catch (err) {
+        showToast("Lỗi xóa nhãn: " + err.message, "error");
+    }
+}
+
+// UI Modals
+const createLabelBtn = document.getElementById("open-label-modal-btn");
+const closeLabelBtn = document.getElementById("close-label-modal-btn");
+const labelModal = document.getElementById("create-label-modal");
+const saveLabelBtn = document.getElementById("save-label-btn");
+
+if (createLabelBtn) {
+    createLabelBtn.addEventListener("click", () => {
+        window._editingLabelId = null;
+        document.querySelector("#create-label-modal .modal-title").innerText = "Tạo nhãn dán mới";
+        document.getElementById("new-label-name").value = "";
+
+        const unassignedList = document.getElementById("unassigned-files-list");
+        unassignedList.innerHTML = "";
+        
+        corpusFiles.forEach(f => {
+            if (!f.label_id && f.category !== 'market_reports') {
+                const label = document.createElement("label");
+                label.style.display = "flex";
+                label.style.alignItems = "center";
+                label.style.gap = "8px";
+                label.style.cursor = "pointer";
+                label.innerHTML = `<input type="checkbox" value="${f.id}"> ${f.file_name}`;
+                unassignedList.appendChild(label);
+            }
+        });
+        
+        if (unassignedList.children.length === 0) {
+            unassignedList.innerHTML = "<p style='color: var(--color-text-tertiary); font-size: 13px;'>Không có file nào ngoài nhãn để thêm.</p>";
+        }
+        
+        labelModal.classList.add("active");
+    });
+}
+if (closeLabelBtn) {
+    closeLabelBtn.addEventListener("click", () => {
+        labelModal.classList.remove("active");
+    });
+}
+
+if (saveLabelBtn) {
+    saveLabelBtn.addEventListener("click", async () => {
+        const nameInput = document.getElementById("new-label-name").value.trim();
+        if (!nameInput) {
+            showToast("Vui lòng nhập tên nhãn dán!", "error");
+            return;
+        }
+        
+        // Add Loading State
+        const originalText = saveLabelBtn.innerHTML;
+        saveLabelBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Đang lưu...';
+        saveLabelBtn.disabled = true;
+        
+        try {
+            let labelId = window._editingLabelId;
+            
+            if (labelId) {
+                // Update existing label name
+                const { error: labelErr } = await supabaseClient
+                    .from("labels")
+                    .update({ name: nameInput })
+                    .eq("id", labelId);
+                if (labelErr) throw labelErr;
+                
+                // Clear old label associations
+                const { error: clearErr } = await supabaseClient
+                    .from("uploaded_files")
+                    .update({ label_id: null })
+                    .eq("label_id", labelId);
+                if (clearErr) throw clearErr;
+            } else {
+                // Create new label
+                const { data: newLabel, error: labelErr } = await supabaseClient
+                    .from("labels")
+                    .insert([{ name: nameInput }])
+                    .select()
+                    .single();
+                if (labelErr) throw labelErr;
+                labelId = newLabel.id;
+            }
+            
+            // Assign selected files
+            const checkedBoxes = document.querySelectorAll("#unassigned-files-list input[type='checkbox']:checked");
+            const fileIds = Array.from(checkedBoxes).map(cb => cb.value);
+            
+            if (fileIds.length > 0) {
+                const { error: updateErr } = await supabaseClient
+                    .from("uploaded_files")
+                    .update({ label_id: labelId })
+                    .in('id', fileIds);
+                if (updateErr) throw updateErr;
+            }
+            
+            labelModal.classList.remove("active");
+            document.getElementById("new-label-name").value = "";
+            showToast(window._editingLabelId ? "Cập nhật nhãn dán thành công!" : "Tạo nhãn dán thành công!", "success");
+            
+            window._editingLabelId = null;
+            
+            // Re-fetch all
+            corpusFiles.clear();
+            selectedAttachFiles.clear();
+            document.getElementById("labels-section").innerHTML = "";
+            document.getElementById("users-files-container").innerHTML = "";
+            document.getElementById("market-reports-container").innerHTML = "";
+            
+            await loadLabels();
+            await loadFiles();
+            
+        } catch (err) {
+            showToast("Lỗi lưu nhãn: " + err.message, "error");
+        } finally {
+            saveLabelBtn.innerHTML = originalText;
+            saveLabelBtn.disabled = false;
+        }
+    });
+}
+
+
+// Sort Logic
+const openSortModalBtn = document.getElementById("open-sort-modal-btn");
+
+if (openSortModalBtn) {
+    openSortModalBtn.addEventListener("click", (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const dropdown = document.getElementById('sort-dropdown');
+        if (dropdown) {
+            dropdown.style.display = dropdown.style.display === 'none' ? 'flex' : 'none';
+        }
+    });
+}
+
+document.addEventListener('click', (event) => {
+    const dropdown = document.getElementById('sort-dropdown');
+    if (dropdown && !dropdown.contains(event.target) && !openSortModalBtn.contains(event.target)) {
+        dropdown.style.display = 'none';
+    }
+});
+
+let sortByNameDirection = "asc";
+let sortByDateDirection = "desc";
+
+async function sortByName() {
+    currentSortColumn = "file_name";
+    if (sortByNameDirection === "asc") {
+        currentSortAscending = true;
+        sortByNameDirection = "desc";
+        document.getElementById("sort-name-icon").className = "fa-solid fa-arrow-up-a-z";
+        showToast("Đã sắp xếp theo tên (A-Z)", "success");
+    } else {
+        currentSortAscending = false;
+        sortByNameDirection = "asc";
+        document.getElementById("sort-name-icon").className = "fa-solid fa-arrow-down-a-z";
+        showToast("Đã sắp xếp theo tên (Z-A)", "success");
+    }
+    document.getElementById("sort-name-icon").style.marginRight = "8px";
+    document.getElementById("sort-name-icon").style.width = "14px";
+    
+    sortByDateDirection = "desc";
+    document.getElementById("sort-date-icon").className = "fa-solid fa-arrow-down-1-9";
+    
+    corpusFiles.clear();
+    document.getElementById("labels-section").innerHTML = "";
+    document.getElementById("users-files-container").innerHTML = "";
+    document.getElementById("market-reports-container").innerHTML = "";
+    await loadLabels();
+    await loadFiles();
+}
+
+async function sortByDate() {
+    currentSortColumn = "created_at";
+    if (sortByDateDirection === "desc") {
+        currentSortAscending = false; 
+        sortByDateDirection = "asc";
+        document.getElementById("sort-date-icon").className = "fa-solid fa-arrow-up-1-9";
+        showToast("Đã sắp xếp theo mới nhất", "success");
+    } else {
+        currentSortAscending = true; 
+        sortByDateDirection = "desc";
+        document.getElementById("sort-date-icon").className = "fa-solid fa-arrow-down-1-9";
+        showToast("Đã sắp xếp theo cũ nhất", "success");
+    }
+    document.getElementById("sort-date-icon").style.marginRight = "8px";
+    document.getElementById("sort-date-icon").style.width = "14px";
+    
+    sortByNameDirection = "asc";
+    document.getElementById("sort-name-icon").className = "fa-solid fa-arrow-down-a-z";
+
+    corpusFiles.clear();
+    document.getElementById("labels-section").innerHTML = "";
+    document.getElementById("users-files-container").innerHTML = "";
+    document.getElementById("market-reports-container").innerHTML = "";
+    await loadLabels();
+    await loadFiles();
+}
+
+async function deleteSort() {
+    currentSortColumn = "created_at";
+    currentSortAscending = false;
+    sortByNameDirection = "asc";
+    sortByDateDirection = "desc";
+    
+    document.getElementById("sort-name-icon").className = "fa-solid fa-arrow-down-a-z";
+    document.getElementById("sort-name-icon").style.marginRight = "8px";
+    document.getElementById("sort-name-icon").style.width = "14px";
+    
+    document.getElementById("sort-date-icon").className = "fa-solid fa-arrow-down-1-9";
+    document.getElementById("sort-date-icon").style.marginRight = "8px";
+    document.getElementById("sort-date-icon").style.width = "14px";
+    
+    showToast("Đã xóa sắp xếp, trở về mặc định!", "success");
+    
+    corpusFiles.clear();
+    document.getElementById("labels-section").innerHTML = "";
+    document.getElementById("users-files-container").innerHTML = "";
+    document.getElementById("market-reports-container").innerHTML = "";
+    await loadLabels();
+    await loadFiles();
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const staticSections = [
+        "users-files-section", 
+        "market-reports-section",
+        "attach-users-files-section",
+        "attach-market-reports-section"
+    ];
+    
+    let sectionStates = {};
+    try {
+        sectionStates = JSON.parse(localStorage.getItem("staticSectionStates")) || {};
+    } catch(e) {}
+
+    staticSections.forEach(id => {
+        const detailsEl = document.getElementById(id);
+        if (detailsEl) {
+            // Apply saved state
+            if (sectionStates[id] !== undefined) {
+                detailsEl.open = sectionStates[id];
+            }
+            
+            // Listen for changes
+            detailsEl.addEventListener("toggle", () => {
+                sectionStates[id] = detailsEl.open;
+                localStorage.setItem("staticSectionStates", JSON.stringify(sectionStates));
+            });
+        }
+    });
+});

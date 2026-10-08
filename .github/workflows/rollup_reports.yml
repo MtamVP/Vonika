@@ -3,8 +3,8 @@ name: Rolling Report Aggregation
 on:
 #  schedule:
   schedule:
-    # 02:15 UTC Thứ 7 hàng tuần -> Báo cáo Tuần
-    - cron: '15 2 * * 6'
+    # 02:15 UTC Chủ Nhật hàng tuần -> Báo cáo Tuần
+    - cron: '15 2 * * 0'
     # 03:15 UTC Mùng 1 hàng tháng -> Báo cáo Tháng
     - cron: '15 3 1 * *'
     # 04:15 UTC Mùng 1 các tháng 1,4,7,10 -> Báo cáo Quý
@@ -58,7 +58,7 @@ jobs:
             ROLLUP_TYPE="none"
             
             # Kiểm tra dựa trên cron expression
-            if [ "$SCHEDULE_EVENT" = "0 2 * * 6" ] || [ "$SCHEDULE_EVENT" = "15 2 * * 6" ]; then ROLLUP_TYPE="weekly"
+            if [ "$SCHEDULE_EVENT" = "0 2 * * 0" ] || [ "$SCHEDULE_EVENT" = "15 2 * * 0" ]; then ROLLUP_TYPE="weekly"
             elif [ "$SCHEDULE_EVENT" = "0 3 1 * *" ] || [ "$SCHEDULE_EVENT" = "15 3 1 * *" ]; then ROLLUP_TYPE="monthly"
             elif [ "$SCHEDULE_EVENT" = "0 4 1 1,4,7,10 *" ] || [ "$SCHEDULE_EVENT" = "15 4 1 1,4,7,10 *" ]; then ROLLUP_TYPE="quarterly"
             elif [ "$SCHEDULE_EVENT" = "0 5 1 1,7 *" ] || [ "$SCHEDULE_EVENT" = "15 5 1 1,7 *" ]; then ROLLUP_TYPE="halfyear"
@@ -68,7 +68,7 @@ jobs:
               CURRENT_DAY_OF_WEEK=$(date +%u)
               CURRENT_DAY=$(date +%d)
               
-              if [ "$CURRENT_DAY_OF_WEEK" = "6" ]; then ROLLUP_TYPE="weekly"
+              if [ "$CURRENT_DAY_OF_WEEK" = "7" ]; then ROLLUP_TYPE="weekly"
               elif [ "$CURRENT_DAY" = "01" ]; then ROLLUP_TYPE="monthly" # Fallback tạm thời
               fi
             fi

@@ -50,7 +50,7 @@ def build_prompt(query: str, context_chunks: list[dict], chat_history: list[dict
         Answer:"""
     return prompt
 
-def generate_answer(query: str, context_chunks: list[dict], chat_history: list[dict], model_name:str = "gemini-2.5-flash"):
+def generate_answer(query: str, context_chunks: list[dict], chat_history: list[dict], model_name:str = "gemini-3.5-flash"):
     # if model_name == "no-ai":
     #     if not context_chunks:
     #         return "Bạn đang chọn chế độ Không dùng AI. Không tìm thấy tài liệu nào phù hợp.", 0
@@ -103,19 +103,18 @@ def generate_answer(query: str, context_chunks: list[dict], chat_history: list[d
     
     fallback_models = []
     if "3.8" in model_name:
-        fallback_models = [model_name.replace("3.8", "3.7"), model_name.replace("3.8", "3.6"), model_name.replace("3.8", "3.5"), model_name.replace("3.8", "2.5")]
+        fallback_models = [model_name.replace("3.8", "3.7"), model_name.replace("3.8", "3.6"), model_name.replace("3.8", "3.5")]
     elif "3.7" in model_name:
-        fallback_models = [model_name.replace("3.7", "3.6"), model_name.replace("3.7", "3.5"), model_name.replace("3.7", "2.5")]
+        fallback_models = [model_name.replace("3.7", "3.6"), model_name.replace("3.7", "3.5")]
     elif "3.6" in model_name:
-        fallback_models = [model_name.replace("3.6", "3.5"), model_name.replace("3.6", "2.5")]
+        fallback_models = [model_name.replace("3.6", "3.5")]
     elif "3.5" in model_name:
-        fallback_models = [model_name.replace("3.5", "2.5")]
-    elif "2.5" in model_name and "pro" in model_name:
-        fallback_models = ["gemini-2.5-flash"]
+        fallback_models = []
         
     models_to_try = [model_name] + fallback_models
     
     import random
+    import time
     
     shuffled_keys = list(api_keys)
     random.shuffle(shuffled_keys)
@@ -125,22 +124,32 @@ def generate_answer(query: str, context_chunks: list[dict], chat_history: list[d
     for current_model in models_to_try:
         for current_key in shuffled_keys:
             client = genai.Client(api_key=current_key)
-            try:
-                response = client.models.generate_content(
-                    model=current_model,
-                    contents=prompt
-                )
-                return response.text, total_tokens
-            except Exception as e:
-                error_str = str(e)
-                last_error_str = error_str
-                if "503" in error_str or "429" in error_str or "UNAVAILABLE" in error_str or "overloaded" in error_str.lower():
-                    print(f"Key {current_key[:10]}... không sử dụng được (429/503), đổi api key...")
-                    time.sleep(1.5)
-                    continue
-                else:
-                    raise HTTPException(status_code=502, detail=f"Lỗi từ Google AI (Model '{current_model}'): {error_str}")
+            
+            # Retry mechanism for each key up to 3 times
+            max_retries = 3
+            for attempt in range(max_retries):
+                try:
+                    response = client.models.generate_content(
+                        model=current_model,
+                        contents=prompt
+                    )
+                    return response.text, total_tokens
+                except Exception as e:
+                    error_str = str(e)
+                    last_error_str = error_str
+                    if "503" in error_str or "429" in error_str or "UNAVAILABLE" in error_str or "overloaded" in error_str.lower():
+                        if attempt < max_retries - 1:
+                            wait_time = (2 ** attempt) * 2 # 2s, 4s
+                            print(f"Lỗi {current_model} (503/429) ở lần {attempt+1}, chờ {wait_time}s rồi thử lại với key hiện tại...")
+                            time.sleep(wait_time)
+                            continue
+                        else:
+                            print(f"Key {current_key[:10]}... vẫn lỗi sau {max_retries} lần thử, đổi api key...")
+                            time.sleep(1.5)
+                            break
+                    else:
+                        raise HTTPException(status_code=502, detail=f"Lỗi từ Google AI (Model '{current_model}'): {error_str}")
+                        
         print(f"Tất cả api key đều không sử dụng được với {current_model}, chuyển sang model dự phòng...")
                     
-    raise HTTPException(status_code=502, detail=f"Tất cả các model và API keys đều không sử dụng được. Lỗi cuối: {last_error_str}")
-        
+    raise HTTPException(status_code=502, detail=f"Lỗi gọi API RAG: Tất cả các model và API keys đều không sử dụng được. Lỗi cuối: {last_error_str}")

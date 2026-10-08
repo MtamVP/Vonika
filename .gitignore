@@ -6,3 +6,6 @@ NEW_REPORT_GENERATED
 extensions/market_report/*.pdf
 extensions/market_report/masvn_report/*.pdf
 extensions/market_report/vietcap/*.pdf
+test_models.py
+Big_Update.md
+FinTechKG.md

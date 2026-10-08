@@ -1,7 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import HTTPException
-from sklearn.utils import gen_batches
 import supabase_client
 from dotenv import load_dotenv
 import models

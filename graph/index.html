@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Fintech Knowledge Graph</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script
+      type="text/javascript"
+      src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"
+    ></script>
+    <link rel="stylesheet" href="style.css" />
+    <link rel="icon" type="image/png" href="/assets/logo.png" />
+  </head>
+  <body class="sidebar-collapsed">
+    <div class="bg-gradient"></div>
+    
+    <button id="sidebarToggle" class="sidebar-toggle" title="Toggle Sidebar">
+      <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
+        <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/>
+      </svg>
+    </button>
+
+    <div class="control-panel collapsed" id="controlPanel">
+      <h1 class="logo-text">FintechKG <span>Explorer</span></h1>
+
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="Tìm kiếm node, quan hệ..." autocomplete="off" />
+        <button id="searchBtn">
+          <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path
+              d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"
+            />
+          </svg>
+        </button>
+        <div id="search-dropdown" class="search-dropdown hidden"></div>
+      </div>
+
+      <details class="filter-section">
+        <summary>
+          <h3>Lọc theo loại</h3>
+          <svg class="chevron" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+          </svg>
+        </summary>
+        <div class="filter-content">
+          <!-- Dữ liệu filter (Node Type) sẽ được tải động từ Supabase vào đây -->
+          <label class="filter-item text-ticker">
+            <input type="checkbox" checked value="TICKER" /> Mã Chứng Khoán
+            <span class="checkmark"></span>
+          </label>
+          <label class="filter-item text-macro">
+            <input type="checkbox" checked value="MACRO" /> Vĩ Mô
+            <span class="checkmark"></span>
+          </label>
+          <label class="filter-item text-event">
+            <input type="checkbox" checked value="EVENT" /> Sự Kiện
+            <span class="checkmark"></span>
+          </label>
+          <label class="filter-item text-company">
+            <input type="checkbox" checked value="COMPANY" /> Doanh Nghiệp
+            <span class="checkmark"></span>
+          </label>
+        </div>
+      </details>
+
+      <details class="filter-section scenario-section">
+        <summary>
+          <h3>Phân tích Kịch bản</h3>
+          <svg class="chevron" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+          </svg>
+        </summary>
+        <div class="filter-content" id="scenario-content">
+          <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 8px;" id="scenario-desc">Chọn một node để phân tích.</p>
+          <div style="display: flex; gap: 8px;">
+            <button id="scenario-up-btn" class="scenario-btn" disabled>Kịch bản Tăng ▲</button>
+            <button id="scenario-down-btn" class="scenario-btn" disabled>Kịch bản Giảm ▼</button>
+          </div>
+          <div id="scenario-results" style="margin-top: 16px; display: flex; flex-direction: column; gap: 8px;"></div>
+        </div>
+      </details>
+
+      <details class="filter-section">
+        <summary>
+          <h3>Lọc Quan Hệ</h3>
+          <svg class="chevron" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+          </svg>
+        </summary>
+        <div class="filter-content">
+          <label class="filter-item"><input type="checkbox" id="filter-edge-causal" checked> <strong>Tác động (Nhân quả)</strong></label>
+          <div style="padding-left: 20px; border-left: 1px solid var(--panel-border); margin-left: 8px; margin-bottom: 8px;">
+            <label class="filter-item" style="color: #4caf50;"><input type="checkbox" id="filter-edge-positive" checked> Tác động tích cực</label>
+            <label class="filter-item" style="color: #f44336;"><input type="checkbox" id="filter-edge-negative" checked> Tác động tiêu cực</label>
+          </div>
+          <hr style="border:0; border-top: 1px solid var(--panel-border); margin: 8px 0;">
+          <label class="filter-item"><input type="checkbox" id="filter-edge-structural" checked> Liên quan (Bao gồm...)</label>
+          <hr style="border:0; border-top: 1px solid var(--panel-border); margin: 8px 0;">
+          <label class="filter-item"><input type="checkbox" id="filter-orphan"> Hiển thị Node không có quan hệ</label>
+        </div>
+      </details>
+
+      <details class="filter-section">
+        <summary>
+          <h3>Lọc Nguồn</h3>
+          <svg class="chevron" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+            <path fill-rule="evenodd" d="M1.646 4.646a.5.5 0 0 1 .708 0L8 10.293l5.646-5.647a.5.5 0 0 1 .708.708l-6 6a.5.5 0 0 1-.708 0l-6-6a.5.5 0 0 1 0-.708z"/>
+          </svg>
+        </summary>
+        <div class="filter-content" id="source-filters">
+        </div>
+      </details>
+    </div>
+
+    <div id="graph-container"></div>
+
+    <div class="map-controls">
+      <button onclick="network.moveTo({scale: network.getScale() + 0.3})" title="Phóng to">+</button>
+      <button onclick="network.moveTo({scale: network.getScale() - 0.3})" title="Thu nhỏ">-</button>
+      <button onclick="network.fit({animation: {duration: 600, easingFunction: 'easeInOutQuad'}})" title="Vừa màn hình">⛶</button>
+    </div>
+
+    <div class="legend-panel">
+      <h4>Chú giải</h4>
+      <div class="legend-item">
+        <span class="legend-line" style="background: #4caf50;"></span> Tác động Tích cực
+      </div>
+      <div class="legend-item">
+        <span class="legend-line" style="background: #f44336;"></span> Tác động Tiêu cực
+      </div>
+      <div class="legend-item">
+        <span class="legend-line" style="background: transparent; border-top: 2px dashed #888;"></span> Có Liên quan
+      </div>
+    </div>
+
+    <div id="info-popup" class="hidden">
+      <div class="popup-header">
+        <h3 id="popup-title">Title</h3>
+        <span id="popup-badge" class="badge">Type</span>
+        <button id="close-popup" class="close-btn">&times;</button>
+      </div>
+      <div class="popup-body">
+        <div id="popup-content"></div>
+      </div>
+      <div class="popup-footer" id="popup-footer" style="padding: 12px; border-top: 1px solid var(--panel-border); display: none;">
+        <span style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 6px;">Hiển thị lân cận:</span>
+        <div style="display: flex; gap: 4px;">
+            <button class="scenario-btn" onclick="highlightConnections(window.selectedNodeId, 1)">1 Bước</button>
+            <button class="scenario-btn" onclick="highlightConnections(window.selectedNodeId, 2)">2 Bước</button>
+            <button class="scenario-btn" onclick="highlightConnections(window.selectedNodeId, 3)">3 Bước</button>
+        </div>
+      </div>
+    </div>
+
+    <script src="graph.js"></script>
+  </body>
+</html>
