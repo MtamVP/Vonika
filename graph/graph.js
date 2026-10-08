@@ -9,6 +9,7 @@ const colorMap = {
 // Data Storage
 let mockNodes = [];
 let mockEdges = [];
+let nodeDegree = {};
 
 const nodes = new vis.DataSet();
 const edges = new vis.DataSet();
@@ -52,11 +53,15 @@ async function loadGraphData() {
             source_files: e.source_files || []
         }));
         
-        const nodeDegree = {};
+        nodeDegree = {};
         mockEdges.forEach(e => {
             nodeDegree[e.from] = (nodeDegree[e.from] || 0) + 1;
             nodeDegree[e.to] = (nodeDegree[e.to] || 0) + 1;
         });
+        
+        setTimeout(() => {
+            network.fit({ animation: { duration: 1000, easingFunction: 'easeInOutQuad' } });
+        }, 1500);
         
         nodes.add(mockNodes.map(node => ({
             id: node.id,
@@ -174,6 +179,7 @@ const options = {
 
 // Initialize Network
 const network = new vis.Network(container, data, options);
+window.network = network;
 
 // UI Interaction Logic
 
@@ -326,12 +332,12 @@ function showPopup(type, dataObj) {
         
         html += `
             <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; background: #111; padding: 10px; border-radius: 6px; border: 1px solid var(--panel-border); flex-wrap: wrap;">
-                <div onclick="network.selectNodes([${fromNode.id}]); network.emit('click', {nodes: [${fromNode.id}], edges: []})" style="cursor: pointer; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 12px; font-size: 13px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                <div onclick="network.selectNodes(['${fromNode.id}']); network.emit('click', {nodes: ['${fromNode.id}'], edges: []})" style="cursor: pointer; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 12px; font-size: 13px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
                     <span style="width: 8px; height: 8px; border-radius: 50%; background: ${colorMap[fromNode.group].highlight}; display: inline-block;"></span>
                     <span style="color:#e0e0e0;">${fromNode.label}</span>
                 </div>
                 <span style="color:#666;"><i class="fa-solid fa-arrow-right"></i></span>
-                <div onclick="network.selectNodes([${toNode.id}]); network.emit('click', {nodes: [${toNode.id}], edges: []})" style="cursor: pointer; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 12px; font-size: 13px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
+                <div onclick="network.selectNodes(['${toNode.id}']); network.emit('click', {nodes: ['${toNode.id}'], edges: []})" style="cursor: pointer; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 12px; font-size: 13px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
                     <span style="width: 8px; height: 8px; border-radius: 50%; background: ${colorMap[toNode.group].highlight}; display: inline-block;"></span>
                     <span style="color:#e0e0e0;">${toNode.label}</span>
                 </div>
@@ -363,8 +369,8 @@ function showPopup(type, dataObj) {
         popupFooter.innerHTML = `
             <span style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 6px;">Hành động mở rộng:</span>
             <div style="display: flex; gap: 4px; flex-direction: column;">
-                <button class="scenario-btn" style="width: 100%; text-align: left; padding-left: 10px;" onclick="focusGroupOfNodes([${fromNode.id}, ${toNode.id}]);"><i class="fa-solid fa-bullseye" style="margin-right: 6px; width: 14px;"></i> Chỉ xem hai đầu cạnh</button>
-                <button class="scenario-btn" style="width: 100%; text-align: left; padding-left: 10px;" onclick="triggerScenarioAnalysis(${fromNode.id});"><i class="fa-solid fa-bolt" style="margin-right: 6px; width: 14px; color: #f59e0b;"></i> Phân tích kịch bản từ <strong>${fromNode.label}</strong></button>
+                <button class="scenario-btn" style="width: 100%; text-align: left; padding-left: 10px;" onclick="focusGroupOfNodes(['${fromNode.id}', '${toNode.id}']);"><i class="fa-solid fa-bullseye" style="margin-right: 6px; width: 14px;"></i> Chỉ xem hai đầu cạnh</button>
+                <button class="scenario-btn" style="width: 100%; text-align: left; padding-left: 10px;" onclick="triggerScenarioAnalysis('${fromNode.id}');"><i class="fa-solid fa-bolt" style="margin-right: 6px; width: 14px; color: #f59e0b;"></i> Phân tích kịch bản từ <strong>${fromNode.label}</strong></button>
             </div>
         `;
     }
