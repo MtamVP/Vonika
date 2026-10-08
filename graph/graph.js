@@ -46,7 +46,7 @@ async function loadGraphData() {
             id: e.id,
             from: e.source_node_id,
             to: e.target_node_id,
-            label: e.label || "Tác động",
+            label: (e.label || "Tác động").trim(),
             relation: e.relation,
             evidence: e.evidence,
             source_files: e.source_files || []
@@ -110,6 +110,7 @@ async function loadGraphData() {
         }
 
         applyFilters();
+        updateSidebarCounts();
         
         const urlParams = new URLSearchParams(window.location.search);
         const focusNode = urlParams.get('node');
@@ -235,7 +236,7 @@ function showPopup(type, dataObj) {
                 else if (e.label === 'Gây áp lực') actionText = 'Chịu áp lực từ';
                 else if (e.label === 'Tác động tiêu cực') actionText = 'Chịu tác động tiêu cực từ';
 
-                html += `<li style="margin-bottom: 4px;">${icon} <span style="color:#fff;">${actionText}</span> <span style="color:${colorMap[source.group].highlight}; cursor:pointer;" onclick="network.selectNodes([${source.id}]); network.emit('click', {nodes: [${source.id}], edges: []})">${source.label}</span></li>`;
+                html += `<li style="margin-bottom: 4px;">${icon} <span style="color:#fff;">${actionText}</span> <span style="color:${colorMap[source.group].highlight}; cursor:pointer;" onclick="network.selectNodes(['${source.id}']); network.emit('click', {nodes: ['${source.id}'], edges: []})">${source.label}</span></li>`;
             });
             html += `</ul>`;
         }
@@ -254,7 +255,7 @@ function showPopup(type, dataObj) {
                 else if (e.label === 'Gây áp lực') actionText = 'Gây áp lực lên';
                 else if (e.label === 'Tác động tiêu cực') actionText = 'Tác động tiêu cực đến';
 
-                html += `<li style="margin-bottom: 4px;">${icon} <span style="color:#fff;">${actionText}</span> <span style="color:${colorMap[target.group].highlight}; cursor:pointer;" onclick="network.selectNodes([${target.id}]); network.emit('click', {nodes: [${target.id}], edges: []})">${target.label}</span></li>`;
+                html += `<li style="margin-bottom: 4px;">${icon} <span style="color:#fff;">${actionText}</span> <span style="color:${colorMap[target.group].highlight}; cursor:pointer;" onclick="network.selectNodes(['${target.id}']); network.emit('click', {nodes: ['${target.id}'], edges: []})">${target.label}</span></li>`;
             });
             html += `</ul>`;
         }
@@ -276,7 +277,7 @@ function showPopup(type, dataObj) {
                     else relText = `Liên kết từ`;
                 }
 
-                html += `<li style="margin-bottom: 4px;"><span style="color:#fff;">${relText}</span> <span style="color:${colorMap[other.group].highlight}; cursor:pointer;" onclick="network.selectNodes([${other.id}]); network.emit('click', {nodes: [${other.id}], edges: []})">${other.label}</span></li>`;
+                html += `<li style="margin-bottom: 4px;"><span style="color:#fff;">${relText}</span> <span style="color:${colorMap[other.group].highlight}; cursor:pointer;" onclick="network.selectNodes(['${other.id}']); network.emit('click', {nodes: ['${other.id}'], edges: []})">${other.label}</span></li>`;
             });
             html += `</ul>`;
         }
@@ -1061,7 +1062,7 @@ function runScenario(shockSign) {
     
     // Render sidebar results
     const resultsContainer = document.getElementById('scenario-results');
-    const affected = Object.keys(scores).filter(id => id != selectedScenarioNode.id).map(id => parseInt(id));
+    const affected = Object.keys(scores).filter(id => id != selectedScenarioNode.id);
     
     if (affected.length === 0) {
         resultsContainer.innerHTML = '<span style="color:#888;">Không có tác động lan truyền.</span>';
@@ -1094,7 +1095,7 @@ function runScenario(shockSign) {
         }
         
         html += `
-        <div style="background: #111111; padding: 10px; border-radius: 6px; border-left: 3px solid ${color}; display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-bottom: 8px;" onclick="network.selectNodes([${id}]); network.emit('click', {nodes: [${id}], edges: []})">
+        <div style="background: #111111; padding: 10px; border-radius: 6px; border-left: 3px solid ${color}; display: flex; justify-content: space-between; align-items: center; cursor: pointer; margin-bottom: 8px;" onclick="network.selectNodes(['${id}']); network.emit('click', {nodes: ['${id}'], edges: []})">
             <div>
                 <div style="font-weight:600; font-size: 13px; color: ${colorMap[n.group].highlight}">${n.label}</div>
                 <div style="font-size: 11px; color: var(--text-muted); margin-top: 2px;">${n.group === 'TICKER' ? 'Cổ phiếu' : 'Yếu tố'} ${stepText}</div>
