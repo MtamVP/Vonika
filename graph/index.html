@@ -14,6 +14,7 @@
     ></script>
     <link rel="stylesheet" href="style.css" />
     <link rel="icon" type="image/png" href="/assets/logo.png" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   </head>
   <body class="sidebar-collapsed">
     <div class="bg-gradient"></div>
@@ -47,7 +48,6 @@
           </svg>
         </summary>
         <div class="filter-content">
-          <!-- Dữ liệu filter (Node Type) sẽ được tải động từ Supabase vào đây -->
           <label class="filter-item text-ticker">
             <input type="checkbox" checked value="TICKER" /> Mã Chứng Khoán
             <span class="checkmark"></span>
@@ -152,6 +152,33 @@
             <button class="scenario-btn" onclick="highlightConnections(window.selectedNodeId, 1)">1 Bước</button>
             <button class="scenario-btn" onclick="highlightConnections(window.selectedNodeId, 2)">2 Bước</button>
             <button class="scenario-btn" onclick="highlightConnections(window.selectedNodeId, 3)">3 Bước</button>
+        </div>
+      </div>
+    </div>
+    <!-- Vonika Sidebar -->
+    <button id="vonika-toggle-btn" class="vonika-toggle-btn" title="Mở Vonika AI">
+      <i class="fa-brands fa-facebook-messenger"></i>
+    </button>
+
+    <div id="vonika-sidebar" class="vonika-sidebar collapsed">
+      <div class="vonika-header">
+        <h3>Vonika Assistant</h3>
+        <button id="vonika-close-btn" class="close-btn">&times;</button>
+      </div>
+      <div class="vonika-body" id="vonika-chat-history">
+        <div class="chat-msg bot">
+          Chào bạn! Tôi là Vonika. 
+        </div>
+      </div>
+      <div class="vonika-footer">
+        <div id="vonika-context" class="vonika-context hidden">
+          <span class="context-label">Đính kèm:</span>
+          <span id="vonika-context-text" class="context-text"></span>
+          <button class="context-clear" onclick="clearVonikaContext()">&times;</button>
+        </div>
+        <div class="vonika-input-wrapper">
+          <textarea id="vonika-input" rows="1" placeholder="Hỏi Vonika..."></textarea>
+          <button id="vonika-send-btn"><i class="fa-solid fa-paper-plane"></i></button>
         </div>
       </div>
     </div>

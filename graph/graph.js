@@ -209,11 +209,18 @@ function showPopup(type, dataObj) {
         popupBadge.style.background = '#111111';
         
         popupFooter.innerHTML = `
-            <span style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 6px;">Hiển thị lân cận:</span>
-            <div style="display: flex; gap: 4px;">
-                <button class="scenario-btn" onclick="highlightConnections(window.selectedNodeId, 1)">1 Bước</button>
-                <button class="scenario-btn" onclick="highlightConnections(window.selectedNodeId, 2)">2 Bước</button>
-                <button class="scenario-btn" onclick="highlightConnections(window.selectedNodeId, 3)">3 Bước</button>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; border: 1px solid var(--panel-border);">
+                <div>
+                    <span style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 6px; text-transform: uppercase;">Mở rộng lân cận</span>
+                    <div style="display: flex; gap: 4px;">
+                        <button class="scenario-btn" style="padding: 4px 8px; border-radius: 12px; font-size: 11px;" onclick="highlightConnections(window.selectedNodeId, 1)">1 Bước</button>
+                        <button class="scenario-btn" style="padding: 4px 8px; border-radius: 12px; font-size: 11px;" onclick="highlightConnections(window.selectedNodeId, 2)">2 Bước</button>
+                        <button class="scenario-btn" style="padding: 4px 8px; border-radius: 12px; font-size: 11px;" onclick="highlightConnections(window.selectedNodeId, 3)">3 Bước</button>
+                    </div>
+                </div>
+                <button class="vonika-ask-btn" onclick="askVonika('NODE', '${dataObj.id}')">
+                    <i class="fa-brands fa-facebook-messenger"></i> Hỏi Vonika
+                </button>
             </div>
         `;
         
@@ -356,7 +363,7 @@ function showPopup(type, dataObj) {
             html += `<p style="margin-top: 12px; font-weight: 500; font-size: 12px; color: #aaa; margin-bottom: 6px;">${dataObj.source_files.length} nguồn tài liệu:</p>`;
             html += `<div class="source-tags">`;
             dataObj.source_files.forEach(file => {
-                html += `<a href="#" class="source-tag" style="text-decoration: none; display: inline-flex; align-items: center; gap: 6px; transition: background 0.2s;" onmouseover="this.style.background='#222'" onmouseout="this.style.background='#111'"><i class="fa-solid fa-file-pdf" style="color: #e53935;"></i> ${file}</a>`;
+                html += `<span class="source-tag" style="display: inline-flex; align-items: center; gap: 6px; background: #111; color: #888; border: 1px solid #333; padding: 4px 8px; border-radius: 4px; font-size: 11px;"><i class="fa-solid fa-file-pdf" style="color: #e53935;"></i> ${file}</span>`;
             });
             html += `</div>`;
         } else {
@@ -367,10 +374,15 @@ function showPopup(type, dataObj) {
         
         popupFooter.style.display = 'block';
         popupFooter.innerHTML = `
-            <span style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 6px;">Hành động mở rộng:</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--panel-border); margin-bottom: 8px;">
+                <span style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Hành động mở rộng:</span>
+                <button class="vonika-ask-btn" onclick="askVonika('EDGE', '${dataObj.id}')">
+                    <i class="fa-brands fa-facebook-messenger"></i> Hỏi Vonika
+                </button>
+            </div>
             <div style="display: flex; gap: 4px; flex-direction: column;">
-                <button class="scenario-btn" style="width: 100%; text-align: left; padding-left: 10px;" onclick="focusGroupOfNodes(['${fromNode.id}', '${toNode.id}']);"><i class="fa-solid fa-bullseye" style="margin-right: 6px; width: 14px;"></i> Chỉ xem hai đầu cạnh</button>
-                <button class="scenario-btn" style="width: 100%; text-align: left; padding-left: 10px;" onclick="triggerScenarioAnalysis('${fromNode.id}');"><i class="fa-solid fa-bolt" style="margin-right: 6px; width: 14px; color: #f59e0b;"></i> Phân tích kịch bản từ <strong>${fromNode.label}</strong></button>
+                <button class="scenario-btn" style="width: 100%; text-align: left; padding-left: 10px; border-radius: 6px;" onclick="focusGroupOfNodes(['${fromNode.id}', '${toNode.id}']);">Chỉ xem hai đầu cạnh</button>
+                <button class="scenario-btn" style="width: 100%; text-align: left; padding-left: 10px; border-radius: 6px;" onclick="triggerScenarioAnalysis('${fromNode.id}');"> Phân tích kịch bản từ <strong>${fromNode.label}</strong></button>
             </div>
         `;
     }
@@ -386,6 +398,11 @@ closeBtn.addEventListener('click', () => {
 let selectedScenarioNode = null;
 
 network.on('click', function (params) {
+    // Hide Vonika Sidebar if it is open when interacting with the graph
+    if (typeof vonikaSidebar !== 'undefined' && vonikaSidebar) {
+        vonikaSidebar.classList.add('collapsed');
+    }
+
     if (params.nodes.length > 0) {
         // Node clicked
         const nodeId = params.nodes[0];
@@ -429,10 +446,12 @@ function resetScenarioUI() {
 }
 
 network.on("hoverEdge", function (e) {
+    if (!edges.get(e.edge)) return;
     edges.update({ id: e.edge, font: { color: '#ffffff', size: 12, strokeWidth: 3, strokeColor: '#111111' } });
 });
 network.on("blurEdge", function (e) {
     const edgeData = edges.get(e.edge);
+    if (!edgeData) return;
     if (!edgeData.highlighted) {
         edges.update({ id: e.edge, font: { color: 'transparent', size: 11, strokeWidth: 0 } });
     } else {
@@ -785,7 +804,7 @@ searchInput.addEventListener('focus', () => {
         topNodes.forEach(n => {
             const groupName = n.group === 'TICKER' ? 'Cổ phiếu' : (n.group === 'MACRO' ? 'Vĩ mô' : (n.group === 'COMPANY' ? 'Doanh nghiệp' : 'Sự kiện'));
             html += `
-            <div class="search-item" onclick="focusNode(${n.id})">
+            <div class="search-item" onclick="focusNode('${n.id}')">
                 <div class="search-item-title">${n.label}</div>
                 <div class="search-item-meta">
                     <span style="color: ${colorMap[n.group].highlight}">${groupName}</span>
@@ -1114,3 +1133,65 @@ function runScenario(shockSign) {
 
 // Load data at startup
 loadGraphData();
+
+// ==========================================
+// VONIKA AI INTEGRATION
+// ==========================================
+const vonikaSidebar = document.getElementById('vonika-sidebar');
+const vonikaToggleBtn = document.getElementById('vonika-toggle-btn');
+const vonikaCloseBtn = document.getElementById('vonika-close-btn');
+const vonikaContextBox = document.getElementById('vonika-context');
+const vonikaContextText = document.getElementById('vonika-context-text');
+
+let currentVonikaContext = null;
+
+if (vonikaToggleBtn && vonikaCloseBtn && vonikaSidebar) {
+    vonikaToggleBtn.addEventListener('click', () => {
+        vonikaSidebar.classList.remove('collapsed');
+    });
+
+    vonikaCloseBtn.addEventListener('click', () => {
+        vonikaSidebar.classList.add('collapsed');
+    });
+}
+
+window.askVonika = function(type, id) {
+    if (vonikaSidebar) {
+        vonikaSidebar.classList.remove('collapsed');
+    }
+    
+    // Set Context
+    if (type === 'NODE') {
+        const node = mockNodes.find(n => n.id === id);
+        if (node && vonikaContextText && vonikaContextBox) {
+            currentVonikaContext = { type: 'NODE', data: node };
+            vonikaContextText.innerHTML = `Node: <strong>${node.label}</strong>`;
+            vonikaContextBox.classList.remove('hidden');
+        }
+    } else if (type === 'EDGE') {
+        const edge = mockEdges.find(e => e.id === id);
+        if (edge && vonikaContextText && vonikaContextBox) {
+            const fromNode = mockNodes.find(n => n.id === edge.from);
+            const toNode = mockNodes.find(n => n.id === edge.to);
+            currentVonikaContext = { type: 'EDGE', data: edge, from: fromNode, to: toNode };
+            vonikaContextText.innerHTML = `Liên kết: <strong>${fromNode.label}</strong> ➔ <strong>${toNode.label}</strong>`;
+            vonikaContextBox.classList.remove('hidden');
+        }
+    }
+};
+
+window.clearVonikaContext = function() {
+    currentVonikaContext = null;
+    if (vonikaContextBox) {
+        vonikaContextBox.classList.add('hidden');
+    }
+};
+
+// Fix for background tabs: Auto-fit when user returns to the tab
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible' && network) {
+        setTimeout(() => {
+            network.fit({ animation: { duration: 800, easingFunction: 'easeInOutQuad' } });
+        }, 100);
+    }
+});
