@@ -1,6 +1,7 @@
 import os
 import sys
 import json
+import time
 import requests
 import pdfplumber
 import urllib.parse
@@ -113,12 +114,34 @@ BÁO CÁO:
 {text[:50000]}
 """
 
-    response = client.models.generate_content(
-        model="gemini-3.6-flash",
-        contents=prompt
-    )
+    models = ["gemini-3.8-flash", "gemini-3.7-flash", "gemini-3.5-flash", "gemini-2.5-flash"]
+    max_retries = 3
+    result_text = None
     
-    result_text = response.text
+    for model_name in models:
+        success = False
+        for attempt in range(max_retries):
+            try:
+                print(f"Đang gọi Gemini model {model_name} (Thử lần {attempt+1}/{max_retries})...")
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt
+                )
+                result_text = response.text
+                success = True
+                break
+            except Exception as e:
+                err_str = str(e)
+                print(f"Lỗi khi gọi {model_name}: {err_str}")
+                if "503" in err_str or "429" in err_str or "UNAVAILABLE" in err_str:
+                    time.sleep(2 ** attempt)  # Exponential backoff 1s, 2s, 4s
+                else:
+                    break # Lỗi khác không phải do nghẽn, skip model này luôn
+        if success:
+            break
+            
+    if not result_text:
+        raise Exception("Tất cả các model đều thất bại hoặc quá tải.")
     if "```json" in result_text:
         result_text = result_text.split("```json")[1].split("```")[0].strip()
     elif "```" in result_text:
@@ -141,7 +164,6 @@ def save_to_supabase(data, file_name):
                 "node_type": node["node_type"],
                 "aliases": node.get("aliases", [])
             }
-            # Prefer: return=representation trả về dữ liệu vừa insert (có chứa UUID)
             headers_with_prefer = {**HEADERS, "Prefer": "return=representation"}
             res = requests.post(f"{SUPABASE_URL}/rest/v1/kg_nodes", headers=headers_with_prefer, json=payload)
             
@@ -162,7 +184,7 @@ def save_to_supabase(data, file_name):
             edges_payload.append({
                 "source_node_id": source_id,
                 "target_node_id": target_id,
-                "label": edge.get("label", ""), # Note: You MUST add column `label` to kg_edges!
+                "label": edge.get("label", ""), 
                 "relation": edge.get("relation", ""),
                 "evidence": edge.get("evidence", ""),
                 "source_files": [file_name]

@@ -92,6 +92,23 @@ async function loadGraphData() {
             };
         }));
         
+        // Load Dynamic Sources
+        const allSources = new Set();
+        mockEdges.forEach(e => {
+            if (e.source_files) e.source_files.forEach(s => allSources.add(s));
+        });
+        const sourceContainer = document.getElementById('source-filters');
+        if (sourceContainer) {
+            sourceContainer.innerHTML = '';
+            allSources.forEach(s => {
+                let cb = document.createElement('label');
+                cb.className = 'filter-item';
+                cb.innerHTML = `<input type="checkbox" value="${s}" checked class="source-filter"> ${s}`;
+                cb.querySelector('input').addEventListener('change', applyFilters);
+                sourceContainer.appendChild(cb);
+            });
+        }
+
         applyFilters();
         
         const urlParams = new URLSearchParams(window.location.search);
@@ -536,18 +553,6 @@ function resetHighlight() {
     edges.update(edgesToUpdate);
 }
 
-// Load Dynamic Sources
-const allSources = new Set();
-mockEdges.forEach(e => {
-    if (e.source_files) e.source_files.forEach(s => allSources.add(s));
-});
-const sourceContainer = document.getElementById('source-filters');
-allSources.forEach(s => {
-    let cb = document.createElement('label');
-    cb.className = 'filter-item';
-    cb.innerHTML = `<input type="checkbox" value="${s}" checked class="source-filter"> ${s}`;
-    sourceContainer.appendChild(cb);
-});
 
 // Unified Filter Logic
 const positiveEdges = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực'];
