@@ -642,7 +642,8 @@ const searchBtn = document.getElementById('searchBtn');
 const searchDropdown = document.getElementById('search-dropdown');
 
 function removeDiacritics(str) {
-    return str.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
+    if (!str) return '';
+    return String(str).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/đ/g, 'd').replace(/Đ/g, 'D').toLowerCase();
 }
 
 function highlightMatch(text, query) {
@@ -716,7 +717,7 @@ function handleSearchInput() {
             const groupName = n.group === 'TICKER' ? 'Cổ phiếu' : (n.group === 'MACRO' ? 'Vĩ mô' : (n.group === 'COMPANY' ? 'Doanh nghiệp' : 'Sự kiện'));
             
             html += `
-            <div class="search-item" onclick="focusNode(${n.id})">
+            <div class="search-item" onclick="focusNode('${n.id}')">
                 <div class="search-item-title">${labelHtml}</div>
                 ${aliasHtml}
                 <div class="search-item-meta">
@@ -726,7 +727,7 @@ function handleSearchInput() {
             </div>`;
         });
         if (matchedNodes.length > 1) {
-            html += `<div class="search-item" style="text-align: center; color: #4caf50; font-size: 12px;" onclick="focusGroupOfNodes([${matchedNodes.map(item => item.node.id).join(',')}])">Chọn tất cả ${matchedNodes.length} node khớp</div>`;
+            html += `<div class="search-item" style="text-align: center; color: #4caf50; font-size: 12px;" onclick="focusGroupOfNodes([${matchedNodes.map(item => `'${item.node.id}'`).join(',')}])">Chọn tất cả ${matchedNodes.length} node khớp</div>`;
         }
     }
     
@@ -881,9 +882,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
     if (startNode) {
         setTimeout(() => {
-            const nId = parseInt(startNode);
-            network.selectNodes([nId]);
-            focusNode(nId);
+            network.selectNodes([startNode]);
+            focusNode(startNode);
         }, 800);
     } else if (startEdge) {
         setTimeout(() => {
