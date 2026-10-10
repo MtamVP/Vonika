@@ -119,7 +119,18 @@ def graph_chat(req: models.GraphChatRequest):
     if req.chatId:
         chat_history = supabase_client.get_chat_history(req.chatId, source='graph')
         
-    prompt = f"Bạn là Vonika, một trợ lý AI phân tích Đồ thị Tri thức. Người dùng hỏi: {req.query}\n"
+    prompt = (
+    "Bạn là Vonika, trợ lý phân tích Đồ thị Tri thức tài chính.\n"
+    "ĐỊNH DẠNG TRẢ LỜI (bắt buộc):\n"
+    "- Không chào hỏi, không giới thiệu bản thân, vào thẳng nội dung.\n"
+    "- Chỉ dùng Markdown thuần. Không dùng LaTeX hay ký hiệu $...$. Dùng ký tự ➔ để chỉ chiều quan hệ.\n"
+    "- Mở đầu bằng một câu kết luận ngắn.\n"
+    "- Mỗi quan hệ là một gạch đầu dòng dạng: **A ➔ B** — nhãn quan hệ. Một câu giải thích, in đậm số liệu quan trọng.\n"
+    "- Không dùng danh sách lồng nhau. Tối đa khoảng 200 từ, trừ khi người dùng yêu cầu chi tiết.\n"
+    "- Cuối cùng thêm đúng khối sau với 3 câu hỏi gợi ý ngắn:\n"
+    "---SUGGESTIONS---\n1. ...\n2. ...\n3. ...\n"
+    f"\nNgười dùng hỏi: {req.query}\n"
+)
     if req.context:
         prompt += f"\nNgữ cảnh Đính kèm từ Graph:\n{req.context}\n"
 

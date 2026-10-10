@@ -1360,6 +1360,48 @@ function appendMessage(role, text, isHtml = false) {
     return msgDiv;
 }
 
+function formatBotAnswer(raw) {
+    const parts = String(raw || '').split(/-{3}\s*SUGGESTIONS\s*-{3}/i);
+    const body = parts[0]
+        .replace(/\$?\\(?:long)?[rR]ightarrow\$?/g, '➔')
+        .replace(/\$?\\to\$?/g, '➔')
+        .trim();
+    const suggestions = (parts[1] || '')
+        .split('\n')
+        .map(l => l.replace(/^\s*(?:\d+[.)]|[-*•])\s*/, '').trim())
+        .filter(Boolean)
+        .slice(0, 3);
+    return { body, suggestions };
+}
+
+function renderBotAnswer(raw) {
+    const { body, suggestions } = formatBotAnswer(raw);
+    const html = window.marked
+        ? marked.parse(body, { breaks: true })
+        : escapeHtml(body).replace(/\n/g, '<br>');
+    const safeHtml = window.DOMPurify ? DOMPurify.sanitize(html) : html;
+    const msg = appendMessage('bot', `<div class="markdown-body">${safeHtml}</div>`, true);
+
+    if (suggestions.length) {
+        const wrap = document.createElement('div');
+        wrap.className = 'vonika-suggestions';
+        suggestions.forEach(s => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'vonika-chip';
+            btn.textContent = s;
+            btn.addEventListener('click', () => {
+                wrap.remove();
+                vonikaInput.value = s;
+                handleSend();
+            });
+            wrap.appendChild(btn);
+        });
+        msg.appendChild(wrap);
+        vonikaChatHistory.scrollTop = vonikaChatHistory.scrollHeight;
+    }
+}
+
 async function handleSend() {
     const text = vonikaInput.value.trim();
     if (!text) return;
@@ -1405,10 +1447,8 @@ async function handleSend() {
         const answer = data.answer || '';
 
         loadingMsg.remove();
-        const rendered = window.marked ? marked.parse(answer) : escapeHtml(answer);
-        const safeHtml = window.DOMPurify ? DOMPurify.sanitize(rendered) : rendered;
-        appendMessage('bot', `<div class="markdown-body" style="background:transparent;">${safeHtml}</div>`, true);
-
+        loadingMsg.remove();
+        renderBotAnswer(answer);
         const { error: saveError } = await supabaseClient
             .from("chat_messages")
             .insert([{ role: "assistant", content: answer, source: "graph", chat_title: "[GRAPH] Session" }]);

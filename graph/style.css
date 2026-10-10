@@ -776,3 +776,55 @@ details.filter-section[open] .chevron {
     border-color: rgba(168, 199, 250, 0.4);
     transform: translateY(-1px);
 }
+
+.chat-msg.bot .markdown-body {
+    background: transparent;
+    font-size: 14px;
+    line-height: 1.65;
+    color: var(--text-main);
+}
+.chat-msg.bot .markdown-body > :first-child { margin-top: 0; }
+.chat-msg.bot .markdown-body > :last-child { margin-bottom: 0; }
+.chat-msg.bot .markdown-body p { margin: 0 0 10px; }
+.chat-msg.bot .markdown-body strong { color: #ffffff; font-weight: 600; }
+.chat-msg.bot .markdown-body ul,
+.chat-msg.bot .markdown-body ol { margin: 6px 0 12px; padding-left: 20px; }
+.chat-msg.bot .markdown-body li { margin-bottom: 8px; }
+.chat-msg.bot .markdown-body li::marker { color: var(--text-muted); }
+.chat-msg.bot .markdown-body h1,
+.chat-msg.bot .markdown-body h2,
+.chat-msg.bot .markdown-body h3 {
+    font-size: 14.5px;
+    font-weight: 600;
+    margin: 14px 0 6px;
+    border: none;
+    padding: 0;
+}
+.chat-msg.bot .markdown-body code {
+    background: rgba(255, 255, 255, 0.08);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-size: 12.5px;
+}
+.chat-msg.bot .markdown-body table { border-collapse: collapse; font-size: 12.5px; margin: 8px 0; }
+.chat-msg.bot .markdown-body th,
+.chat-msg.bot .markdown-body td { border: 1px solid var(--panel-border); padding: 4px 8px; }
+
+.vonika-suggestions { display: flex; flex-direction: column; gap: 8px; margin-top: 14px; }
+.vonika-chip {
+    text-align: left;
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid var(--panel-border);
+    color: var(--text-muted);
+    padding: 8px 12px;
+    border-radius: 16px;
+    font-size: 12.5px;
+    line-height: 1.4;
+    cursor: pointer;
+    transition: all 0.15s;
+}
+.vonika-chip:hover {
+    color: #ffffff;
+    border-color: #569cd6;
+    background: rgba(86, 156, 214, 0.1);
+}
