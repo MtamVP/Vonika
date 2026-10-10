@@ -14,9 +14,12 @@ let nodeDegree = {};
 const nodes = new vis.DataSet();
 const edges = new vis.DataSet();
 
+const SUPABASE_URL = "https://jqzlmzbvaesczarqptye.supabase.co";
+const SUPABASE_KEY = "sb_publishable_wXUovp36dvd_VwdX-U8ecg_P-OrGwEb";
+const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const backend_url = "https://vonika-git-110018515227.us-central1.run.app/api";
+
 async function loadGraphData() {
-    const SUPABASE_URL = "https://jqzlmzbvaesczarqptye.supabase.co";
-    const SUPABASE_KEY = "sb_publishable_wXUovp36dvd_VwdX-U8ecg_P-OrGwEb";
     const headers = { 
         "apikey": SUPABASE_KEY, 
         "Authorization": `Bearer ${SUPABASE_KEY}` 
@@ -43,15 +46,29 @@ async function loadGraphData() {
             aliases: n.aliases || []
         }));
         
-        mockEdges = dbEdges.map(e => ({
-            id: e.id,
-            from: e.source_node_id,
-            to: e.target_node_id,
-            label: (e.label || "Tác động").trim(),
-            relation: e.relation,
-            evidence: e.evidence,
-            source_files: e.source_files || []
-        }));
+        mockEdges = dbEdges.map(e => {
+            let label = (e.label || "Tác động").normalize('NFC').trim();
+            return {
+                id: e.id,
+                from: e.source_node_id,
+                to: e.target_node_id,
+                label: label,
+                relation: (e.relation || "").normalize('NFC'),
+                evidence: (e.evidence || "").normalize('NFC'),
+                source_files: e.source_files || []
+            };
+        });
+
+        // Deduplicate mockEdges by ID just in case to prevent vis.js errors
+        const uniqueEdges = new Map();
+        mockEdges.forEach(e => {
+            if (!uniqueEdges.has(e.id)) {
+                uniqueEdges.set(e.id, e);
+            }
+        });
+        mockEdges = Array.from(uniqueEdges.values());
+
+
         
         nodeDegree = {};
         mockEdges.forEach(e => {
@@ -88,7 +105,7 @@ async function loadGraphData() {
                 label: edge.label,
                 font: { color: 'transparent', size: 11, face: 'Inter', align: 'middle', strokeWidth: 0 },
                 color: { color: style.color, highlight: style.highlight, hover: style.hover, inherit: false },
-                arrows: { to: { enabled: true, scaleFactor: 0.8 } },
+                arrows: style.arrows || { to: { enabled: true, scaleFactor: 0.8 } },
                 width: style.width,
                 dashes: style.dashes,
                 smooth: { type: 'dynamic' },
@@ -97,15 +114,27 @@ async function loadGraphData() {
             };
         }));
         
-        // Load Dynamic Sources
         const allSources = new Set();
         mockEdges.forEach(e => {
             if (e.source_files) e.source_files.forEach(s => allSources.add(s));
         });
+        
+        // Convert Set to Array and Sort Descending (Newest to Oldest)
+        const sortedSources = Array.from(allSources).sort((a, b) => {
+            const dateMatchA = a.match(/(\d{2})-(\d{2})-(\d{4})/);
+            const dateMatchB = b.match(/(\d{2})-(\d{2})-(\d{4})/);
+            if (dateMatchA && dateMatchB) {
+                const dateA = new Date(dateMatchA[3], dateMatchA[2] - 1, dateMatchA[1]);
+                const dateB = new Date(dateMatchB[3], dateMatchB[2] - 1, dateMatchB[1]);
+                return dateB - dateA;
+            }
+            return b.localeCompare(a); // Fallback string sort descending
+        });
+
         const sourceContainer = document.getElementById('source-filters');
         if (sourceContainer) {
             sourceContainer.innerHTML = '';
-            allSources.forEach(s => {
+            sortedSources.forEach(s => {
                 let cb = document.createElement('label');
                 cb.className = 'filter-item';
                 cb.innerHTML = `<input type="checkbox" value="${s}" checked class="source-filter"> ${s}`;
@@ -130,17 +159,35 @@ async function loadGraphData() {
 
 
 // Determine Edge Styles
+const GLOBAL_POSITIVE = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực', 'Tích cực', 'Làm tăng'];
+const GLOBAL_NEGATIVE = ['Gây áp lực', 'Tác động tiêu cực', 'Tiêu cực', 'Làm giảm'];
+const GLOBAL_STRUCTURE = ['Bao gồm', 'Sở hữu', 'Cấu trúc', 'Hành động'];
+
+const EDGE_VERBS = {
+  "Sở hữu": { forward: "sở hữu", backward: "là công ty con của" },
+  "Bao gồm": { forward: "bao gồm", backward: "thuộc" },
+  "Hành động": { forward: "thực hiện", backward: "được thực hiện bởi" },
+  "Tác động tích cực": { forward: "tác động tích cực đến", backward: "được hưởng lợi từ" },
+  "Tác động tiêu cực": { forward: "tác động tiêu cực đến", backward: "bị ảnh hưởng bởi" },
+  "Thúc đẩy": { forward: "thúc đẩy", backward: "được thúc đẩy bởi" },
+  "Làm tăng": { forward: "làm tăng", backward: "bị làm tăng bởi" },
+  "Gây áp lực": { forward: "gây áp lực lên", backward: "chịu áp lực từ" },
+  "Làm giảm": { forward: "làm giảm", backward: "bị làm giảm bởi" },
+  "Hưởng lợi": { forward: "được hưởng lợi từ", backward: "mang lại lợi ích cho" }
+};
+
+const ROLE_BADGES = {
+  "Sở hữu": { source: "MẸ", target: "CON" },
+  "Bao gồm": { source: "TỔNG", target: "THÀNH PHẦN" }
+};
+
 function getEdgeStyle(label) {
-    const positive = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực', 'Tích cực'];
-    const negative = ['Gây áp lực', 'Tác động tiêu cực', 'Tiêu cực'];
-    const structure = ['Bao gồm', 'Công ty mẹ', 'Cấu trúc'];
-    
-    if (positive.includes(label)) {
+    if (GLOBAL_POSITIVE.includes(label)) {
         return { color: '#4caf50', width: 2, hover: '#81c784', highlight: '#81c784', dashes: false };
-    } else if (negative.includes(label)) {
+    } else if (GLOBAL_NEGATIVE.includes(label)) {
         return { color: '#f44336', width: 2, hover: '#e57373', highlight: '#e57373', dashes: false };
-    } else if (structure.includes(label)) {
-        return { color: '#888888', width: 1, hover: '#aaaaaa', highlight: '#ffffff', dashes: [5, 5] };
+    } else if (GLOBAL_STRUCTURE.includes(label)) {
+        return { color: '#888888', width: 1.5, hover: '#aaaaaa', highlight: '#ffffff', dashes: [5, 5], arrows: { to: { enabled: true, type: 'diamond', scaleFactor: 1.2 } } };
     } else {
         return { color: 'rgba(255,255,255,0.2)', width: 1, hover: 'rgba(255,255,255,0.6)', highlight: 'rgba(255,255,255,0.8)', dashes: false };
     }
@@ -209,13 +256,13 @@ function showPopup(type, dataObj) {
         popupBadge.style.background = '#111111';
         
         popupFooter.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 10px; border-radius: 8px; border: 1px solid var(--panel-border);">
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 14px 16px; border-radius: var(--radius-md); border: 1px solid var(--panel-border);">
                 <div>
-                    <span style="font-size: 10px; color: var(--text-muted); display: block; margin-bottom: 6px; text-transform: uppercase;">Mở rộng lân cận</span>
-                    <div style="display: flex; gap: 4px;">
-                        <button class="scenario-btn" style="padding: 4px 8px; border-radius: 12px; font-size: 11px;" onclick="highlightConnections(window.selectedNodeId, 1)">1 Bước</button>
-                        <button class="scenario-btn" style="padding: 4px 8px; border-radius: 12px; font-size: 11px;" onclick="highlightConnections(window.selectedNodeId, 2)">2 Bước</button>
-                        <button class="scenario-btn" style="padding: 4px 8px; border-radius: 12px; font-size: 11px;" onclick="highlightConnections(window.selectedNodeId, 3)">3 Bước</button>
+                    <span style="font-size: 11px; color: var(--text-muted); display: block; margin-bottom: 8px; text-transform: uppercase; font-weight: 600; letter-spacing: 0.05em;">Mở rộng lân cận</span>
+                    <div style="display: flex; gap: 6px;">
+                        <button class="scenario-btn" style="padding: 6px 10px; border-radius: 16px; font-size: 11px;" onclick="highlightConnections(window.selectedNodeId, 1)">1 Bước</button>
+                        <button class="scenario-btn" style="padding: 6px 10px; border-radius: 16px; font-size: 11px;" onclick="highlightConnections(window.selectedNodeId, 2)">2 Bước</button>
+                        <button class="scenario-btn" style="padding: 6px 10px; border-radius: 16px; font-size: 11px;" onclick="highlightConnections(window.selectedNodeId, 3)">3 Bước</button>
                     </div>
                 </div>
                 <button class="vonika-ask-btn" onclick="askVonika('NODE', '${dataObj.id}')">
@@ -323,8 +370,14 @@ function showPopup(type, dataObj) {
             natureIcon = '<i class="fa-solid fa-arrow-trend-down" style="margin-right:4px;"></i>';
         }
         
-        popupTitle.innerText = dataObj.label;
-        popupTitle.style.color = edgeColor;
+        const eLabel = dataObj.label;
+        const verbFwd = EDGE_VERBS[eLabel]?.forward ?? eLabel.toLowerCase();
+        const verbBwd = EDGE_VERBS[eLabel]?.backward ?? `liên quan tới`;
+        
+        popupTitle.innerText = `${fromNode.label} ${verbFwd} ${toNode.label}`;
+        popupTitle.style.color = 'var(--text-main)';
+        popupTitle.style.fontSize = '16px';
+        popupTitle.style.lineHeight = '1.4';
         
         popupBadge.innerHTML = `${natureIcon}${edgeNature}`;
         popupBadge.style.color = edgeColor;
@@ -333,20 +386,33 @@ function showPopup(type, dataObj) {
         
         let html = '';
         
-        if (dataObj.relation) {
-            html += `<div style="font-size: 12px; color: #aaa; margin-bottom: 12px; display: flex; align-items: center; gap: 6px;"><span style="display:inline-block; width: 4px; height: 12px; background: ${edgeColor}; border-radius: 2px;"></span> <strong>Bản chất:</strong> ${dataObj.relation}</div>`;
+        if (dataObj.relation && !GLOBAL_STRUCTURE.includes(eLabel)) {
+            html += `<div style="font-size: 13px; color: var(--text-muted); margin-bottom: 12px; display: flex; align-items: flex-start; gap: 8px;">
+                <span style="display:inline-block; width: 4px; height: 16px; background: ${edgeColor}; border-radius: 2px; flex-shrink: 0; margin-top: 2px;"></span> 
+                <span><strong>Bản chất:</strong> ${dataObj.relation}</span>
+            </div>`;
         }
         
+        const srcBadge = ROLE_BADGES[eLabel]?.source;
+        const tgtBadge = ROLE_BADGES[eLabel]?.target;
+        
         html += `
-            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 16px; background: #111; padding: 10px; border-radius: 6px; border: 1px solid var(--panel-border); flex-wrap: wrap;">
-                <div onclick="network.selectNodes(['${fromNode.id}']); network.emit('click', {nodes: ['${fromNode.id}'], edges: []})" style="cursor: pointer; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 12px; font-size: 13px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: ${colorMap[fromNode.group].highlight}; display: inline-block;"></span>
-                    <span style="color:#e0e0e0;">${fromNode.label}</span>
+            <div style="font-size: 12.5px; color: var(--text-muted); text-align: center; margin-bottom: 8px; font-style: italic;">${toNode.label} ${verbBwd} ${fromNode.label}</div>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 10px; margin-bottom: 20px; background: rgba(0,0,0,0.2); padding: 12px 16px; border-radius: var(--radius-sm); border: 1px solid var(--panel-border);">
+                <div style="text-align: center;">
+                    <div onclick="network.selectNodes(['${fromNode.id}']); network.emit('click', {nodes: ['${fromNode.id}'], edges: []})" style="cursor: pointer; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 16px; font-size: 13px; font-weight: 500; transition: background 0.2s; max-width: 160px;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'" title="${fromNode.label.replace(/"/g, '&quot;')}">
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: ${colorMap[fromNode.group].highlight}; display: inline-block; flex-shrink: 0;"></span>
+                        <span style="color:#f4f4f5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${fromNode.label}</span>
+                    </div>
+                    ${srcBadge ? `<div style="font-size: 10px; font-weight: bold; margin-top: 6px; color: ${edgeColor}; letter-spacing: 0.05em;">${srcBadge}</div>` : ''}
                 </div>
-                <span style="color:#666;"><i class="fa-solid fa-arrow-right"></i></span>
-                <div onclick="network.selectNodes(['${toNode.id}']); network.emit('click', {nodes: ['${toNode.id}'], edges: []})" style="cursor: pointer; display: flex; align-items: center; gap: 6px; background: rgba(255,255,255,0.05); padding: 4px 8px; border-radius: 12px; font-size: 13px; transition: background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: ${colorMap[toNode.group].highlight}; display: inline-block;"></span>
-                    <span style="color:#e0e0e0;">${toNode.label}</span>
+                <span style="color:#666; font-size: 14px;"><i class="fa-solid fa-arrow-right"></i></span>
+                <div style="text-align: center;">
+                    <div onclick="network.selectNodes(['${toNode.id}']); network.emit('click', {nodes: ['${toNode.id}'], edges: []})" style="cursor: pointer; display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,0.05); padding: 6px 12px; border-radius: 16px; font-size: 13px; font-weight: 500; transition: background 0.2s; max-width: 160px;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'" title="${toNode.label.replace(/"/g, '&quot;')}">
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: ${colorMap[toNode.group].highlight}; display: inline-block; flex-shrink: 0;"></span>
+                        <span style="color:#f4f4f5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${toNode.label}</span>
+                    </div>
+                    ${tgtBadge ? `<div style="font-size: 10px; font-weight: bold; margin-top: 6px; color: ${edgeColor}; letter-spacing: 0.05em;">${tgtBadge}</div>` : ''}
                 </div>
             </div>
         `;
@@ -374,15 +440,15 @@ function showPopup(type, dataObj) {
         
         popupFooter.style.display = 'block';
         popupFooter.innerHTML = `
-            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.03); padding: 8px 10px; border-radius: 8px; border: 1px solid var(--panel-border); margin-bottom: 8px;">
-                <span style="font-size: 11px; color: var(--text-muted); font-weight: 500;">Hành động mở rộng:</span>
+            <div style="display: flex; justify-content: space-between; align-items: center; background: rgba(255,255,255,0.04); padding: 12px 14px; border-radius: var(--radius-md); border: 1px solid var(--panel-border); margin-bottom: 12px;">
+                <span style="font-size: 12px; color: var(--text-muted); font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em;">Hành động mở rộng:</span>
                 <button class="vonika-ask-btn" onclick="askVonika('EDGE', '${dataObj.id}')">
                     <i class="fa-brands fa-facebook-messenger"></i> Hỏi Vonika
                 </button>
             </div>
-            <div style="display: flex; gap: 4px; flex-direction: column;">
-                <button class="scenario-btn" style="width: 100%; text-align: left; padding-left: 10px; border-radius: 6px;" onclick="focusGroupOfNodes(['${fromNode.id}', '${toNode.id}']);">Chỉ xem hai đầu cạnh</button>
-                <button class="scenario-btn" style="width: 100%; text-align: left; padding-left: 10px; border-radius: 6px;" onclick="triggerScenarioAnalysis('${fromNode.id}');"> Phân tích kịch bản từ <strong>${fromNode.label}</strong></button>
+            <div style="display: flex; gap: 8px; flex-direction: column;">
+                <button class="scenario-btn" style="width: 100%; text-align: left; padding: 10px 14px; border-radius: var(--radius-sm);" onclick="focusGroupOfNodes(['${fromNode.id}', '${toNode.id}']);">Chỉ xem hai đầu cạnh</button>
+                <button class="scenario-btn" style="width: 100%; text-align: left; padding: 10px 14px; border-radius: var(--radius-sm);" onclick="triggerScenarioAnalysis('${fromNode.id}');"> Phân tích kịch bản từ <strong>${fromNode.label}</strong></button>
             </div>
         `;
     }
@@ -581,9 +647,9 @@ function resetHighlight() {
 
 
 // Unified Filter Logic
-const positiveEdges = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực', 'Tích cực'];
-const negativeEdges = ['Gây áp lực', 'Tác động tiêu cực', 'Tiêu cực'];
-const structureEdges = ['Bao gồm', 'Công ty mẹ', 'Cấu trúc'];
+const positiveEdges = GLOBAL_POSITIVE;
+const negativeEdges = GLOBAL_NEGATIVE;
+const structureEdges = GLOBAL_STRUCTURE;
 
 function applyFilters() {
     // 1. Get filter states
@@ -934,16 +1000,16 @@ function updateSidebarCounts() {
     let posCount = 0, negCount = 0;
     const sourceCounts = {};
     
-    const positiveEdges = ['Thúc đẩy', 'Hưởng lợi', 'Tác động tích cực', 'Tích cực'];
-    const negativeEdges = ['Gây áp lực', 'Tác động tiêu cực', 'Tiêu cực'];
-    const structureEdges = ['Bao gồm', 'Công ty mẹ', 'Cấu trúc'];
+    const posEdges = GLOBAL_POSITIVE;
+    const negEdges = GLOBAL_NEGATIVE;
+    const structEdges = GLOBAL_STRUCTURE;
     
     mockEdges.forEach(e => {
-        let isStruct = structureEdges.includes(e.label);
+        let isStruct = structEdges.includes(e.label);
         if (isStruct) structuralCount++; else causalCount++;
         
-        if (positiveEdges.includes(e.label)) posCount++;
-        if (negativeEdges.includes(e.label)) negCount++;
+        if (posEdges.includes(e.label)) posCount++;
+        if (negEdges.includes(e.label)) negCount++;
         
         if (e.source_files) {
             e.source_files.forEach(s => {
@@ -1134,9 +1200,7 @@ function runScenario(shockSign) {
 // Load data at startup
 loadGraphData();
 
-// ==========================================
-// VONIKA AI INTEGRATION
-// ==========================================
+// Vonika Sidebar
 const vonikaSidebar = document.getElementById('vonika-sidebar');
 const vonikaToggleBtn = document.getElementById('vonika-toggle-btn');
 const vonikaCloseBtn = document.getElementById('vonika-close-btn');
@@ -1187,7 +1251,6 @@ window.clearVonikaContext = function() {
     }
 };
 
-// Fix for background tabs: Auto-fit when user returns to the tab
 document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'visible' && network) {
         setTimeout(() => {
@@ -1195,3 +1258,195 @@ document.addEventListener('visibilitychange', () => {
         }, 100);
     }
 });
+
+// Export Graph to Markdown
+window.exportGraphToMarkdown = function() {
+    let md = "# Tổng hợp Nội dung Đồ thị Tri thức (Fintech KG)\n\n";
+    md += `*Thời gian xuất: ${new Date().toLocaleString('vi-VN')}*\n\n`;
+    
+    md += "## 1. Danh sách Thực thể (Nodes)\n\n";
+    const groups = { TICKER: 'Mã Chứng Khoán', MACRO: 'Vĩ Mô', EVENT: 'Sự Kiện', COMPANY: 'Doanh Nghiệp' };
+    
+    Object.keys(groups).forEach(gKey => {
+        const groupNodes = mockNodes.filter(n => n.group === gKey);
+        if (groupNodes.length > 0) {
+            md += `### ${groups[gKey]}\n`;
+            groupNodes.forEach(n => {
+                md += `- **${n.label}**`;
+                if (n.aliases && n.aliases.length) {
+                    md += ` *(Tên khác: ${n.aliases.join(', ')})*`;
+                }
+                md += `\n`;
+            });
+            md += "\n";
+        }
+    });
+
+    md += "## 2. Danh sách Mối quan hệ (Edges)\n\n";
+    mockEdges.forEach(e => {
+        const fromNode = mockNodes.find(n => n.id === e.from);
+        const toNode = mockNodes.find(n => n.id === e.to);
+        if (fromNode && toNode) {
+            md += `- **${fromNode.label}** ➔ [${e.label}] ➔ **${toNode.label}**\n`;
+            if (e.relation) md += `  - *Bản chất:* ${e.relation}\n`;
+            if (e.evidence) md += `  - *Trích dẫn:* "${e.evidence}"\n`;
+            if (e.source_files && e.source_files.length) md += `  - *Nguồn:* ${e.source_files.join(', ')}\n`;
+            md += "\n";
+        }
+    });
+
+    // Generate file and trigger download
+    const blob = new Blob([md], { type: 'text/markdown;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `FintechKG_Export_${new Date().toISOString().slice(0,10)}.md`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+};
+
+// VONIKA CHAT UI LOGIC
+const vonikaInput = document.getElementById('vonika-input');
+const vonikaSendBtn = document.getElementById('vonika-send-btn');
+const vonikaChatHistory = document.getElementById('vonika-chat-history');
+
+let currentChatId = null;
+
+function collectSourceFiles(ctx) {
+    if (ctx && ctx.type === 'EDGE') return ctx.data.source_files || [];
+    return [];
+}
+
+function buildGraphContext(ctx) {
+    if (!ctx) return null;
+    if (ctx.type === 'EDGE') {
+        const e = ctx.data;
+        return {
+            type: 'EDGE',
+            source: ctx.from?.label,
+            target: ctx.to?.label,
+            label: e.label,
+            relation: e.relation,
+            evidence: e.evidence,
+            source_files: e.source_files || []
+        };
+    }
+    const n = ctx.data;
+    const relations = mockEdges
+        .filter(e => e.from === n.id || e.to === n.id)
+        .map(e => ({
+            source: mockNodes.find(x => x.id === e.from)?.label,
+            target: mockNodes.find(x => x.id === e.to)?.label,
+            label: e.label,
+            relation: e.relation,
+            evidence: e.evidence
+        }));
+    return { type: 'NODE', name: n.label, node_type: n.group, aliases: n.aliases || [], relations };
+}
+
+function escapeHtml(s) {
+    return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+function appendMessage(role, text, isHtml = false) {
+    const msgDiv = document.createElement('div');
+    msgDiv.className = `chat-msg ${role}`;
+    if (isHtml) msgDiv.innerHTML = text;
+    else msgDiv.textContent = text;
+    vonikaChatHistory.appendChild(msgDiv);
+    vonikaChatHistory.scrollTop = vonikaChatHistory.scrollHeight;
+    return msgDiv;
+}
+
+async function handleSend() {
+    const text = vonikaInput.value.trim();
+    if (!text) return;
+
+    appendMessage('user', text);
+
+    vonikaInput.disabled = true;
+    vonikaSendBtn.disabled = true;
+    vonikaInput.value = '';
+    vonikaInput.style.height = 'auto';
+
+    const loadingMsg = appendMessage(
+        'bot',
+        '<i class="fa-solid fa-circle-notch fa-spin"></i> Đang phân tích đồ thị...',
+        true
+    );
+
+    try {
+        const { data: insertedData, error: dbError } = await supabaseClient
+            .from("chat_messages")
+            .insert([{ role: "user", content: text, source: "graph", chat_title: "[GRAPH] Session" }])
+            .select();
+
+        if (dbError) throw dbError;
+        if (insertedData?.length > 0) currentChatId = insertedData[0].id;
+
+        const payload = {
+            query: text,
+            context: buildGraphContext(currentVonikaContext),
+            source_files: collectSourceFiles(currentVonikaContext),
+            chatId: currentChatId
+        };
+
+        const res = await fetch(`${backend_url}/graph-chat`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+
+        if (!res.ok) throw new Error(`Backend trả về lỗi ${res.status}`);
+
+        const data = await res.json();
+        const answer = data.answer || '';
+
+        loadingMsg.remove();
+        const rendered = window.marked ? marked.parse(answer) : escapeHtml(answer);
+        const safeHtml = window.DOMPurify ? DOMPurify.sanitize(rendered) : rendered;
+        appendMessage('bot', `<div class="markdown-body" style="background:transparent;">${safeHtml}</div>`, true);
+
+        const { error: saveError } = await supabaseClient
+            .from("chat_messages")
+            .insert([{ role: "assistant", content: answer, source: "graph", chat_title: "[GRAPH] Session" }]);
+        if (saveError) console.error("Không lưu được tin nhắn bot:", saveError);
+
+    } catch (err) {
+        console.error(err);
+        loadingMsg.remove();
+        appendMessage(
+            'bot',
+            `<span style="color:#f44336;"><i class="fa-solid fa-circle-exclamation"></i> ${escapeHtml(err.message || 'Không thể kết nối với Vonika Backend!')}</span>`,
+            true
+        );
+    } finally {
+        vonikaInput.disabled = false;
+        vonikaSendBtn.disabled = false;
+        vonikaInput.focus();
+    }
+}
+
+if (vonikaSendBtn && vonikaInput) {
+    vonikaSendBtn.addEventListener('click', handleSend);
+    
+    vonikaInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            handleSend();
+        }
+    });
+    
+    vonikaInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+        if(this.scrollHeight > 150) {
+            this.style.overflowY = 'auto';
+            this.style.height = '150px';
+        } else {
+            this.style.overflowY = 'hidden';
+        }
+    });
+}

@@ -424,6 +424,7 @@ async function loadMessages() {
   const { data, error } = await supabaseClient
     .from("chat_messages")
     .select("*")
+    .eq("source", "main")
     .order("id", { ascending: true });
 
   if (error) console.error("Error loading messages:", error);
@@ -487,7 +488,7 @@ async function sendMessages(text) {
   try {
     const { data: insertedData, error: dbError } = await supabaseClient
       .from("chat_messages")
-      .insert([{ role: "user", content: text, chat_title: titleToSave }])
+      .insert([{ role: "user", content: text, chat_title: titleToSave, source: "main" }])
       .select();
 
     if (dbError) throw dbError;
@@ -522,7 +523,7 @@ async function sendMessages(text) {
 
     await supabaseClient
       .from("chat_messages")
-      .insert([{ role: "assistant", content: contentToSave, chat_title: titleToSave }]);
+      .insert([{ role: "assistant", content: contentToSave, chat_title: titleToSave, source: "main" }]);
   } catch (error) {
     console.error("Error:", error);
     if (error.name === 'AbortError' || error.message.includes('abort')) {
@@ -613,6 +614,7 @@ async function newChatFunction() {
     const { error: dbError } = await supabaseClient
       .from("chat_messages")
       .delete()
+      .eq("source", "main")
       .not("id", "is", null);
     if (dbError) throw dbError;
   } catch (error) {

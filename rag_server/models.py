@@ -11,5 +11,9 @@ class ChatRequest(BaseModel):
     model: Optional[str] = "gemini-3.5-flash"
     top_k_chunks: Optional[int] = 50
 
-
-    
+class GraphChatRequest(BaseModel):
+    query: str
+    context: Optional[dict] = None
+    source_files: List[str] = []
+    chatId: Optional[int] = None
+    model: Optional[str] = "gemini-3.5-flash"

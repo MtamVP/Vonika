@@ -1,3 +1,4 @@
+import re
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi import HTTPException
@@ -11,6 +12,37 @@ load_dotenv(override=True)
 
 app = FastAPI(title="RAG Backend", description="Classical ways")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_credentials=False, allow_methods=["*"], allow_headers=["*"])
+
+REPORT_BUCKET = "graph_context"
+MAX_REPORT_CHARS = 60000
+_report_cache = {}
+
+
+def load_report_text(source_file_name):
+    md_name = re.sub(r"\.pdf$", ".md", source_file_name, flags=re.IGNORECASE)
+    if md_name in _report_cache:
+        return _report_cache[md_name]
+    try:
+        data = supabase_client.download_file(REPORT_BUCKET, md_name)
+    except Exception as e:
+        print(f"Không tải được {REPORT_BUCKET}/{md_name}: {e}")
+        return None
+    if not data:
+        return None
+    text = data.decode("utf-8", errors="ignore") if isinstance(data, (bytes, bytearray)) else str(data)
+    text = text[:MAX_REPORT_CHARS]
+    _report_cache[md_name] = text
+    return text
+
+
+def build_report_context(source_files):
+    parts = []
+    for name in dict.fromkeys(source_files or []):
+        text = load_report_text(name)
+        if text:
+            parts.append(f"=== {name} ===\n{text}")
+    return "\n\n".join(parts)
+
 
 @app.post("/api/process-file")
 def process_file(req: models.ProcessFileRequest):
@@ -69,6 +101,27 @@ def chat(req: models.ChatRequest):
     sources = [f["file_name"] for f in source_files_info]
     
     return {"answer": answer, "sources": sources, "tokens": tokens}
+
+@app.post("/api/graph-chat")
+def graph_chat(req: models.GraphChatRequest):
+    chat_history = []
+    if req.chatId:
+        chat_history = supabase_client.get_chat_history(req.chatId, source='graph')
+        
+    prompt = f"Bạn là Vonika, một trợ lý AI phân tích Đồ thị Tri thức. Người dùng hỏi: {req.query}\n"
+    if req.context:
+        prompt += f"\nNgữ cảnh Đính kèm từ Graph:\n{req.context}\n"
+
+    report_context = build_report_context(req.source_files)
+    if report_context:
+        prompt += (
+            "\nNội dung đầy đủ của báo cáo gốc (ưu tiên dùng để trả lời, "
+            "chỉ nêu thông tin có trong báo cáo hoặc ngữ cảnh ở trên):\n"
+            f"{report_context}\n"
+        )
+    
+    answer, tokens = llm.generate_answer(prompt, [], chat_history, req.model)
+    return {"answer": answer, "tokens": tokens}
 
 import requests
 import os

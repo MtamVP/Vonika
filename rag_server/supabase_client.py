@@ -57,11 +57,11 @@ def download_file(bucket: str, storage_path:str):
 
 # chat_messages
 
-def get_chat_history(chat_id: int, limit: int = 10):
+def get_chat_history(chat_id: int, limit: int = 10, source: str = 'main'):
 
     response = (
         supabase.table("chat_messages")
-        .select("*")
+        .select("*").eq("source", source)
         .lt("id", chat_id)
         .order("id", desc=True)
         .limit(limit)

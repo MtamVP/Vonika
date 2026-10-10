@@ -12,6 +12,8 @@
       type="text/javascript"
       src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"
     ></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <link rel="stylesheet" href="style.css" />
     <link rel="icon" type="image/png" href="/assets/logo.png" />
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" integrity="sha512-iecdLmaskl7CVkqkXNQ/ZH/XLlvWZOJyj7Yy7tcenmpD1ypASozpmT/E0iPtmFIB46ZmdtAc9eNBvH0H/ZpiBw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
@@ -19,7 +21,7 @@
   <body class="sidebar-collapsed">
     <div class="bg-gradient"></div>
     
-    <button id="sidebarToggle" class="sidebar-toggle" title="Toggle Sidebar">
+    <button id="sidebarToggle" class="sidebar-toggle" title="Thanh công cụ">
       <svg width="24" height="24" fill="currentColor" viewBox="0 0 24 24">
         <path d="M3 6h18v2H3V6zm0 5h18v2H3v-2zm0 5h18v2H3v-2z"/>
       </svg>
@@ -155,7 +157,10 @@
         </div>
       </div>
     </div>
-    <!-- Vonika Sidebar -->
+    <!-- Vonika Sidebar & Actions -->
+    <button id="export-md-btn" class="export-md-btn" title="Xuất nội dung Đồ thị ra file Markdown" onclick="exportGraphToMarkdown()">
+      <i class="fa-solid fa-file-export"></i>
+    </button>
     <button id="vonika-toggle-btn" class="vonika-toggle-btn" title="Mở Vonika AI">
       <i class="fa-brands fa-facebook-messenger"></i>
     </button>
