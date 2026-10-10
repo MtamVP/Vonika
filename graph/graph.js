@@ -1311,8 +1311,125 @@ window.exportGraphToMarkdown = function() {
 const vonikaInput = document.getElementById('vonika-input');
 const vonikaSendBtn = document.getElementById('vonika-send-btn');
 const vonikaChatHistory = document.getElementById('vonika-chat-history');
+const newChatBtn = document.getElementById('new-chat-btn');
 
 let currentChatId = null;
+
+function showWelcomeMessage() {
+    appendMessage('bot', 'Chào bạn! Tôi là Vonika.');
+}
+
+async function newChatFunction() {
+    if (vonikaSendBtn.disabled) return;
+    if (!confirm('Bắt đầu cuộc trò chuyện mới? Toàn bộ lịch sử chat graph sẽ bị xóa vĩnh viễn.')) return;
+
+    newChatBtn.disabled = true;
+    try {
+        const { error } = await supabaseClient
+            .from("chat_messages")
+            .delete()
+            .eq("source", "graph");
+        if (error) throw error;
+
+        currentChatId = null;
+        vonikaChatHistory.innerHTML = '';
+        vonikaInput.value = '';
+        vonikaInput.style.height = 'auto';
+        clearVonikaContext();
+        showWelcomeMessage();
+    } catch (error) {
+        console.error("Không xóa được lịch sử chat:", error);
+        appendMessage('bot', 'Không tạo được cuộc trò chuyện mới, bạn thử lại nhé.');
+    } finally {
+        newChatBtn.disabled = false;
+    }
+}
+
+if (newChatBtn) {
+    newChatBtn.addEventListener('click', newChatFunction);
+}
+
+
+async function loadMessages(limit = 30) {
+    const { data, error } = await supabaseClient
+        .from("chat_messages")
+        .select("id, role, content")
+        .eq("source", "graph")
+        .order("id", { ascending: false })
+        .limit(limit);
+
+    if (error) {
+        console.error("Không tải được lịch sử chat:", error);
+        return;
+    }
+    if (!data || data.length === 0) return;
+
+    const messages = data.reverse();
+
+    let lastBotIndex = -1;
+    messages.forEach((m, i) => {
+        if (m.role !== 'user') lastBotIndex = i;
+    });
+
+    messages.forEach((m, i) => {
+        if (m.role === 'user') {
+            appendMessage('user', m.content);
+        } else {
+            renderBotAnswer(m.content, i === lastBotIndex);
+        }
+    });
+    scrollChatToBottom();
+}
+
+loadMessages();
+
+function scrollChatToBottom() {
+    vonikaChatHistory.scrollTop = vonikaChatHistory.scrollHeight;
+}
+
+function formatBotAnswer(raw) {
+    const parts = String(raw || '').split(/-{3}\s*SUGGESTIONS\s*-{3}/i);
+    const body = parts[0]
+        .replace(/\$?\\(?:long)?[rR]ightarrow\$?/g, '➔')
+        .replace(/\$?\\to\$?/g, '➔')
+        .trim();
+    const suggestions = (parts[1] || '')
+        .split('\n')
+        .map(l => l.replace(/^\s*(?:\d+[.)]|[-*•])\s*/, '').trim())
+        .filter(Boolean)
+        .slice(0, 3);
+    return { body, suggestions };
+}
+
+function renderBotAnswer(raw, withSuggestions = true) {
+    const { body, suggestions } = formatBotAnswer(raw);
+    const html = window.marked
+        ? marked.parse(body, { breaks: true })
+        : escapeHtml(body).replace(/\n/g, '<br>');
+    const safeHtml = window.DOMPurify ? DOMPurify.sanitize(html) : html;
+    const msg = appendMessage('bot', `<div class="markdown-body">${safeHtml}</div>`, true);
+
+    if (withSuggestions && suggestions.length) {
+        const wrap = document.createElement('div');
+        wrap.className = 'vonika-suggestions';
+        suggestions.forEach(s => {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'vonika-chip';
+            btn.textContent = s;
+            btn.addEventListener('click', () => {
+                wrap.remove();
+                vonikaInput.value = s;
+                handleSend();
+            });
+            wrap.appendChild(btn);
+        });
+        msg.appendChild(wrap);
+    }
+
+    scrollChatToBottom();
+    return msg;
+}
 
 function collectSourceFiles(ctx) {
     if (ctx && ctx.type === 'EDGE') return ctx.data.source_files || [];
@@ -1358,48 +1475,6 @@ function appendMessage(role, text, isHtml = false) {
     vonikaChatHistory.appendChild(msgDiv);
     vonikaChatHistory.scrollTop = vonikaChatHistory.scrollHeight;
     return msgDiv;
-}
-
-function formatBotAnswer(raw) {
-    const parts = String(raw || '').split(/-{3}\s*SUGGESTIONS\s*-{3}/i);
-    const body = parts[0]
-        .replace(/\$?\\(?:long)?[rR]ightarrow\$?/g, '➔')
-        .replace(/\$?\\to\$?/g, '➔')
-        .trim();
-    const suggestions = (parts[1] || '')
-        .split('\n')
-        .map(l => l.replace(/^\s*(?:\d+[.)]|[-*•])\s*/, '').trim())
-        .filter(Boolean)
-        .slice(0, 3);
-    return { body, suggestions };
-}
-
-function renderBotAnswer(raw) {
-    const { body, suggestions } = formatBotAnswer(raw);
-    const html = window.marked
-        ? marked.parse(body, { breaks: true })
-        : escapeHtml(body).replace(/\n/g, '<br>');
-    const safeHtml = window.DOMPurify ? DOMPurify.sanitize(html) : html;
-    const msg = appendMessage('bot', `<div class="markdown-body">${safeHtml}</div>`, true);
-
-    if (suggestions.length) {
-        const wrap = document.createElement('div');
-        wrap.className = 'vonika-suggestions';
-        suggestions.forEach(s => {
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'vonika-chip';
-            btn.textContent = s;
-            btn.addEventListener('click', () => {
-                wrap.remove();
-                vonikaInput.value = s;
-                handleSend();
-            });
-            wrap.appendChild(btn);
-        });
-        msg.appendChild(wrap);
-        vonikaChatHistory.scrollTop = vonikaChatHistory.scrollHeight;
-    }
 }
 
 async function handleSend() {
@@ -1490,3 +1565,5 @@ if (vonikaSendBtn && vonikaInput) {
         }
     });
 }
+
+loadMessages();

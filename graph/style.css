@@ -828,3 +828,29 @@ details.filter-section[open] .chevron {
     border-color: #569cd6;
     background: rgba(86, 156, 214, 0.1);
 }
+
+.new-chat-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 6px 12px; 
+  background-color: transparent; 
+  border: 1px solid transparent;
+  color: #d1d5db; 
+  border-radius: 8px; 
+  cursor: pointer;
+  font-weight: 500;
+  font-size: 14px;
+  transition: all 0.2s ease;
+}
+
+.new-chat-btn:hover {
+  background-color: rgba(255, 255, 255, 0.1); 
+  color: #ffffff; 
+}
+
+.new-chat-btn:active {
+  background-color: rgba(255, 255, 255, 0.15);
+  transform: scale(0.96); 
+}
