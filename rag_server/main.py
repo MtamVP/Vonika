@@ -8,6 +8,7 @@ import models
 import parser
 import retrieval
 import llm
+import unicodedata
 load_dotenv(override=True)
 
 app = FastAPI(title="RAG Backend", description="Classical ways")
@@ -17,9 +18,19 @@ REPORT_BUCKET = "graph_context"
 MAX_REPORT_CHARS = 60000
 _report_cache = {}
 
+def report_md_key(file_name):
+    m = re.search(r"(\d{2})-(\d{2})-(\d{4})", file_name)
+    if m:
+        d, mo, y = m.groups()
+        return f"BaoCao_{y}-{mo}-{d}.md"
+    base = re.sub(r"\.(pdf|md)$", "", file_name, flags=re.IGNORECASE)
+    base = base.replace("đ", "d").replace("Đ", "D")
+    base = unicodedata.normalize("NFKD", base).encode("ascii", "ignore").decode("ascii")
+    base = re.sub(r"[^A-Za-z0-9]+", "_", base).strip("_")
+    return f"{base or 'report'}.md"
 
 def load_report_text(source_file_name):
-    md_name = re.sub(r"\.pdf$", ".md", source_file_name, flags=re.IGNORECASE)
+    md_name = report_md_key(source_file_name)
     if md_name in _report_cache:
         return _report_cache[md_name]
     try:

@@ -7,6 +7,7 @@ import pdfplumber
 import urllib.parse
 from google import genai
 from dotenv import load_dotenv
+import unicodedata
 
 env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), "rag_server", ".env")
 load_dotenv(env_path)
@@ -69,13 +70,24 @@ def extract_text(pdf_path):
     return text
 
 
+def report_md_key(file_name):
+    m = re.search(r"(\d{2})-(\d{2})-(\d{4})", file_name)
+    if m:
+        d, mo, y = m.groups()
+        return f"BaoCao_{y}-{mo}-{d}.md"
+    base = re.sub(r"\.(pdf|md)$", "", file_name, flags=re.IGNORECASE)
+    base = base.replace("đ", "d").replace("Đ", "D")
+    base = unicodedata.normalize("NFKD", base).encode("ascii", "ignore").decode("ascii")
+    base = re.sub(r"[^A-Za-z0-9]+", "_", base).strip("_")
+    return f"{base or 'report'}.md"
+
+
 def upload_report_to_storage(file_name, text):
-    md_file_name = re.sub(r"\.pdf$", ".md", file_name, flags=re.IGNORECASE)
+    md_key = report_md_key(file_name)
     md_content = f"# {file_name}\n\n{text}"
     md_bytes = md_content.encode("utf-8")
 
-    encoded_name = urllib.parse.quote(md_file_name)
-    upload_url = f"{SUPABASE_URL}/storage/v1/object/{REPORT_BUCKET}/{encoded_name}"
+    upload_url = f"{SUPABASE_URL}/storage/v1/object/{REPORT_BUCKET}/{md_key}"
     upload_headers = {
         **HEADERS,
         "Content-Type": "text/markdown; charset=utf-8",
@@ -83,7 +95,7 @@ def upload_report_to_storage(file_name, text):
     }
     resp = requests.post(upload_url, headers=upload_headers, data=md_bytes)
     if resp.ok:
-        print(f"Đã upload báo cáo lên Storage: {REPORT_BUCKET}/{md_file_name}")
+        print(f"Đã upload báo cáo lên Storage: {REPORT_BUCKET}/{md_key}")
         return True
     print(f"Lỗi upload Storage: {resp.status_code} {resp.text}")
     return False
